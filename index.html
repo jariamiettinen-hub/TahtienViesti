@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✦ Tähtien Viesti ✦</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Raleway:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Raleway', sans-serif; background: #fdf0f3; color: #1a0a0e; min-height: 100vh; padding: 2rem 1rem; }
+  .stars-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0; }
+  .star { position: absolute; border-radius: 50%; background: #c08090; opacity: 0; animation: twinkle var(--d) ease-in-out infinite var(--delay); }
+  @keyframes twinkle { 0%,100%{opacity:0} 50%{opacity:var(--op)} }
+  .container { position: relative; z-index: 1; max-width: 780px; margin: 0 auto; }
+
+  .api-banner { background: #f5dde3; border: 0.5px solid #d89aaa; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 2rem; }
+  .api-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .api-banner label { font-family: 'Cinzel', serif; font-size: 11px; color: #7a2030; letter-spacing: .1em; white-space: nowrap; }
+  .api-banner input { flex: 1; min-width: 180px; background: #fae8ec; border: 0.5px solid #e0a8b5; border-radius: 6px; color: #1a0a0e; padding: .45rem .8rem; font-family: monospace; font-size: 13px; }
+  .api-banner input:focus { outline: none; border-color: #8b3a52; }
+  .api-save-btn { padding: .45rem 1rem; background: transparent; border: 0.5px solid #c9a84c; border-radius: 6px; color: #8b3a52; font-family: 'Cinzel', serif; font-size: 11px; cursor: pointer; transition: background .2s; }
+  .api-save-btn:hover { background: rgba(201,168,76,.1); }
+  .api-status { font-size: 11px; color: #6a3040; }
+  .api-status.ok { color: #2a7a2a; }
+  .api-note { font-size: 11px; color: #7a2030; margin-top: 8px; }
+
+  h1 { font-family: 'Cinzel', serif; font-size: 26px; font-weight: 600; color: #8b3a52; text-align: center; letter-spacing: .15em; margin-bottom: .4rem; }
+  .subtitle { text-align: center; font-size: 12px; color: #a89880; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 2rem; }
+
+  .tabs { display: flex; border-radius: 8px; overflow: hidden; border: 0.5px solid #e8b0bc; margin-bottom: 2rem; }
+  .tab { flex: 1; padding: .75rem; background: #fae8ec; color: #a89880; border: none; cursor: pointer; font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: .08em; transition: all .2s; }
+  .tab.active { background: #f0d0d8; color: #8b3a52; border-bottom: 1.5px solid #8b3a52; }
+  .tab:hover:not(.active) { background: #f5dce2; color: #c0a87a; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .signs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .sign-btn { background: #fae8ec; border: 0.5px solid #e0a8b5; border-radius: 8px; padding: .75rem .4rem; color: #1a0a0e; cursor: pointer; text-align: center; font-family: 'Raleway', sans-serif; font-size: 12px; transition: all .2s; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .sign-btn .glyph { font-size: 24px; }
+  .sign-btn .elname { font-size: 11px; color: #a89880; }
+  .sign-btn:hover, .sign-btn.selected { background: #f0d0d8; border-color: #8b3a52; color: #1a0a0e; }
+  .sign-btn.selected .elname { color: #8b3a52; }
+
+  .result-box { background: #fae8ec; border: 0.5px solid #e0a8b5; border-radius: 10px; padding: 1.25rem; margin-top: 1rem; min-height: 80px; }
+  .loading { color: #7a2030; font-size: 13px; text-align: center; padding: 1.5rem; font-style: italic; }
+
+  .result-header { display: flex; align-items: center; gap: 14px; margin-bottom: 1.2rem; padding-bottom: .9rem; border-bottom: 0.5px solid #e0a8b5; }
+  .result-glyph { font-size: 42px; }
+  .result-name { font-family: 'Cinzel', serif; font-size: 18px; color: #8b3a52; }
+  .result-tagline { font-size: 13px; color: #7a2030; margin-top: 3px; font-style: italic; }
+  .result-dates { font-size: 12px; color: #6a3040; margin-top: 3px; }
+
+  .section-label { font-family: 'Cinzel', serif; font-size: 10px; color: #6a3040; letter-spacing: .18em; text-transform: uppercase; margin-bottom: .6rem; display: flex; align-items: center; gap: 8px; }
+  .section-label::after { content: ''; flex: 1; height: 0.5px; background: #e8c0ca; }
+
+  .desc-block { font-size: 14px; line-height: 1.9; color: #2a1015; border-left: 3px solid #d08090; padding-left: 1rem; margin-bottom: .5rem; }
+  .desc-source { font-size: 10px; color: #7a2030; margin-bottom: 1.1rem; padding-left: 1rem; }
+
+  .summary-block { font-size: 14px; line-height: 1.9; color: #1a0a0e; margin-bottom: 1rem; }
+
+  .divider { height: 0.5px; background: #e8c0ca; margin: 1.25rem 0; }
+
+  .keywords { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1.1rem; }
+  .kw { border-radius: 20px; padding: 3px 10px; font-size: 11px; }
+  .kw-str { background: rgba(139,58,82,.08); border: 0.5px solid rgba(139,58,82,.3); color: #8b3a52; }
+  .kw-wk  { background: rgba(180,40,40,.08); border: 0.5px solid rgba(180,40,40,.3); color: #b02020; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .trait-box { background: #f5dde3; border: 0.5px solid #e0a8b5; border-radius: 8px; padding: .85rem 1rem; }
+  .trait-box h4 { font-family: 'Cinzel', serif; font-size: 10px; color: #6a3040; letter-spacing: .12em; margin-bottom: .5rem; }
+  .trait-box p { font-size: 13px; color: #d4c8a8; line-height: 1.7; }
+
+  .love-box { background: #f7e0e6; border: 0.5px solid #d890a5; border-radius: 8px; padding: .85rem 1rem; margin-bottom: 1rem; }
+  .love-box h4 { font-family: 'Cinzel', serif; font-size: 10px; color: #7a1030; letter-spacing: .12em; margin-bottom: .5rem; }
+  .love-box p { font-size: 13px; color: #4a1020; line-height: 1.7; }
+
+  .ai-text { font-size: 14px; line-height: 1.9; color: #1a0a0e; }
+
+  .section-box { background: #f5dde3; border: 0.5px solid #e0a8b5; border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; }
+  .section-box h3 { font-family: 'Cinzel', serif; font-size: 12px; color: #6a3040; letter-spacing: .12em; margin-bottom: 1rem; }
+  .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .input-group label { display: block; font-size: 11px; color: #6a3040; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 5px; }
+  input[type="date"], input[type="time"], select { width: 100%; background: #fae8ec; border: 0.5px solid #e0a8b5; border-radius: 8px; color: #1a0a0e; padding: .5rem .8rem; font-family: 'Raleway', sans-serif; font-size: 13px; cursor: pointer; }
+  input:focus, select:focus { outline: none; border-color: #8b3a52; }
+  input::-webkit-calendar-picker-indicator { filter: invert(.5) sepia(1) hue-rotate(10deg); }
+  select option { background: #fae8ec; }
+
+  /* Oma päivämäärävalitsin */
+  .date-picker { display: flex; gap: 8px; align-items: stretch; }
+  .date-field { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .date-field.day { flex: 0 0 76px; }
+  .date-field.month { flex: 0 0 76px; }
+  .date-field.year { flex: 0 0 76px; }
+  .date-field > label { font-size: 10px; color: #7a2030; letter-spacing: .08em; text-transform: uppercase; align-self: flex-start; }
+  .date-spinner { display: flex; flex-direction: column; align-items: center; background: #fae8ec; border: 0.5px solid #e0a8b5; border-radius: 8px; overflow: hidden; width: 100%; }
+  .date-spinner .spin-btn { background: none; border: none; cursor: pointer; color: #8b3a52; font-size: 16px; padding: 3px 0; width: 100%; line-height: 1; transition: background .15s; }
+  .date-spinner .spin-btn:hover { background: rgba(139,58,82,.1); }
+  .date-spinner .spin-input { font-family: 'Raleway', sans-serif; font-size: 15px; color: #1a0a0e; padding: 5px 4px; text-align: center; width: 100%; border-top: 0.5px solid #e0a8b5; border-bottom: 0.5px solid #e0a8b5; border-left: none; border-right: none; border-radius: 0; background: #fae8ec; outline: none; box-sizing: border-box; }
+  .date-reset-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+  .date-reset-wrap > label { font-size: 10px; color: #7a2030; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+  .date-reset { display: flex; align-items: center; justify-content: center; width: 76px; background: #8b3a52; border: 0.5px solid #6a2038; border-radius: 8px; cursor: pointer; color: #fff; font-size: 26px; transition: background .15s; flex: 1; }
+  .date-reset:hover { background: #6a2038; }
+  .sign-detected { margin-top: .75rem; padding: .5rem .75rem; background: rgba(139,58,82,.08); border: 0.5px solid rgba(139,58,82,.4); border-radius: 6px; font-size: 12px; color: #8b3a52; display: none; }
+
+  .btn-primary { width: 100%; padding: .85rem; background: transparent; border: 0.5px solid #c9a84c; border-radius: 8px; color: #8b3a52; font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: .1em; cursor: pointer; transition: all .2s; margin-bottom: .75rem; }
+  .btn-primary:hover { background: rgba(201,168,76,.1); }
+  .btn-primary:active { transform: scale(.98); }
+  .btn-secondary { width: 100%; padding: .7rem; background: transparent; border: 0.5px solid #e8b0bc; border-radius: 8px; color: #a89880; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: .08em; cursor: pointer; transition: all .2s; margin-bottom: 1rem; }
+  .btn-secondary:hover { border-color: #a89880; color: #1a0a0e; }
+
+  .compat-header { display: flex; align-items: center; justify-content: center; gap: 1.5rem; margin-bottom: 1rem; padding-bottom: .75rem; border-bottom: 0.5px solid #e0a8b5; }
+  .compat-sign { text-align: center; }
+  .compat-sign .glyph { font-size: 36px; }
+  .compat-sign .name { font-size: 13px; color: #8b3a52; font-family: 'Cinzel', serif; }
+  .compat-heart { font-size: 72px; color: #8a3a3a; }
+  .best-match-box { background: #8b3a52; color: #fff; border-radius: 10px; padding: 1rem 1.25rem; text-align: center; font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: .1em; margin-bottom: 1.25rem; }
+  .score-bar { display: flex; align-items: center; gap: 12px; margin: .9rem 0; }
+  .score-label { font-size: 13px; color: #6a3040; min-width: 110px; display: flex; align-items: center; gap: 6px; }
+  .score-emoji { font-size: 28px; line-height: 1; }
+  .bar-track { flex: 1; height: 4px; background: #e8c0ca; border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; background: #8b3a52; transition: width .8s ease; width: 0%; }
+  .score-num { font-size: 13px; color: #8b3a52; min-width: 36px; text-align: right; }
+  .error-text { color: #8b0000; font-size: 13px; padding: 1rem; text-align: center; }
+  .error-small { color: #7a2030; font-size: 11px; text-align: center; margin-top: 4px; }
+
+  @media (max-width: 480px) {
+    .two-col { grid-template-columns: 1fr; }
+    .input-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="stars-bg" id="stars"></div>
+<div class="container">
+
+
+  <h1>✦ TÄHTIEN VIESTI ✦</h1>
+  <p class="subtitle">Horoskoopit &amp; kosminen yhteensopivuus</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('merkit')">Horoskooppimerkit</button>
+    <button class="tab" onclick="switchTab('syntyma')">Syntymätiedot</button>
+    <button class="tab" onclick="switchTab('compat')">Yhteensopivuus</button>
+  </div>
+
+  <div id="panel-merkit" class="panel active">
+    <div class="signs-grid" id="signsGrid"></div>
+    <div class="result-box" id="signResult">
+      <p class="loading">Valitse merkki nähdäksesi sen ominaisuudet...</p>
+    </div>
+  </div>
+
+  <div id="panel-syntyma" class="panel">
+    <div class="section-box">
+      <h3>SYNTYMÄTIETOSI</h3>
+      <div class="input-grid">
+        <div class="input-group" style="grid-column:1/-1"><label>Syntymäpäivä</label><div id="bdayDatePicker"></div></div>
+      </div>
+      <div class="sign-detected" id="detectedSign"></div>
+    </div>
+    <button class="btn-primary" onclick="showBdayBase()">✦ Näytä merkkini kuvaus ✦</button>
+
+    <div class="result-box" id="bdayResult">
+      <p class="loading">Anna syntymäpäiväsi saadaksesi kuvauksesi...</p>
+    </div>
+  </div>
+
+  <div id="panel-compat" class="panel">
+    <div class="section-box">
+      <h3>HENKILÖ 1</h3>
+      <div class="input-grid">
+        <div class="input-group"><label>Syntymäpäivä</label><div id="p1datePicker"></div></div>
+        <div class="input-group"><label>Merkki</label><select id="p1sign"><option value="">— valitse —</option></select></div>
+      </div>
+      <div class="sign-detected" id="p1detected"></div>
+    </div>
+    <div class="section-box">
+      <h3>HENKILÖ 2</h3>
+      <div class="input-grid">
+        <div class="input-group"><label>Syntymäpäivä</label><div id="p2datePicker"></div></div>
+        <div class="input-group"><label>Merkki</label><select id="p2sign"><option value="">— valitse —</option></select></div>
+      </div>
+      <div class="sign-detected" id="p2detected"></div>
+    </div>
+    <button class="btn-primary" onclick="analyzeCompat()">✦ Tutki kosminen yhteys ✦</button>
+    <div class="result-box" id="compatResult">
+      <p class="loading">Anna molempien syntymätiedot tai valitse merkit...</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Merkkidata: yhdistetty Anna.fi + Seura.fi ──
+const SIGNS = [
+  {
+    fi: "Oinas", glyph: "♈", start: [3,21], end: [4,19], el: "Tuli", planet: "Mars",
+    tagline: "Kilpailullinen johtajaluonne",
+    kuvaus: "Oinaalla on sisäänrakennettu tarve toimia — ajatuksesta teoksi kuluu vähemmän aikaa kuin muilla. Rohkeus ja suoruus ovat merkin selkäranka, eikä se peitä näkemyksiään toisten mieliksi. Tästä syntyy luontainen vaikutusvalta: oinasta seurataan, koska se kulkee edellä. Vastatuulikin tulee: kärsimättömyys on todellinen heikkous, ja kun tahto törmää esteeseen, turhautuminen nousee pintaan salamana.",
+    rakkaus: "Oinaan rakkaussuhteet ovat kuumia mutta myrskyisiä. Jokainen, joka on koskaan rakastunut oinaaseen, on taatusti mennyt läpi tunteiden vuoristoradan.",
+    vahvuudet: ["Rohkeus","Itsevarmuus","Aloitekyky","Intohimoisuus","Rehellisyys"],
+    heikkoudet: ["Kärsimättömyys","Lyhyt pinna","Kilpailuhenkisyys"]
+  },
+  {
+    fi: "Härkä", glyph: "♉", start: [4,20], end: [5,20], el: "Maa", planet: "Venus",
+    tagline: "Luotettava ystävä ja harkitseva",
+    kuvaus: "Härkä liikkuu hitaasti mutta varmasti — kiirettä ei ole, sillä jokainen askel otetaan harkiten ja kunnolla. Turvallisuus syntyy tutuista ihmisistä, vakiintuneista tavoista ja kodin konkreettisesta mukavuudesta. Läheisilleen härkä antaa kaikkensa: lojaalius on syvää ja rakkaus käytännöllistä. Jäykkyys on varjopuoli — uusia suuntia tai muutoksia härkä vastustaa viimeiseen asti.",
+    rakkaus: "Härän rakkaussuhteet ovat vakavia, pitkiä ja voimakkaan rakkauden täyteisiä.",
+    vahvuudet: ["Sitkeys","Kärsivällisyys","Lojaalius","Sydämellisyys","Aikaansaavuus"],
+    heikkoudet: ["Itsepäisyys","Mukavuudenhalu","Muutoksen pelko","Mustasukkaisuus"]
+  },
+  {
+    fi: "Kaksoset", glyph: "♊", start: [5,21], end: [6,20], el: "Ilma", planet: "Merkurius",
+    tagline: "Persoonallinen liihottaja",
+    kuvaus: "Kaksoset kerää ympärilleen ihmisiä, harrastuksia ja ideoita — tylsyyttä ei tunneta. Tämä merkki sopeutuu tilanteesta toiseen vaivatta, ja ajatukset muuntuvat puheeksi tai tekstiksi luontevammin kuin useimmilla. Kaikki vaihtoehdot tuntuvat houkuttelevilta samanaikaisesti, mikä tekee päätöksistä tuskallisia — ja kerran tehtyihin sitoumuksiin palaaminen ei ole vahvin laji.",
+    rakkaus: "Kaksonen viihtyy sinkkuna ja loistaa lyhyissä, nopeasti leimahtavissa suhteissa. Pitkä suhde voi loksahtaa kohdilleen leikkisän ja aktiivisen kumppanin kanssa.",
+    vahvuudet: ["Vilkkaus","Sopeutuvuus","Uteliaisuus","Sosiaalisuus","Nopea-älyisyys"],
+    heikkoudet: ["Päättämättömyys","Impulsiivisuus","Sitoutumattomuus"]
+  },
+  {
+    fi: "Rapu", glyph: "♋", start: [6,21], end: [7,22], el: "Vesi", planet: "Kuu",
+    tagline: "Toivoton empaatikko",
+    kuvaus: "Rapu tunnistaa huoneessa vallitsevan tunnelmalatauksen ennen kuin kukaan on sanonut sanaakaan. Tämä herkkyys tekee siitä poikkeuksellisen myötätuntoisen — rapu välittää aidosti ja muistaa pienimmätkin yksityiskohdat läheistensä elämästä. Kiintymys on syvää, ehkä joskus liiankin tiivistä: loukkaukset painuvat mieleen pitkäksi aikaa, ja irrottautuminen voi olla vaikeaa.",
+    rakkaus: "Rapu on rakkaudessa läsnäoleva ja huomioonottava kumppani, joka voi toisaalta tulla liian mustasukkaiseksi.",
+    vahvuudet: ["Empaattisuus","Intuitio","Lojaalius","Suojeluvaisto","Myötätunto"],
+    heikkoudet: ["Yliherkkyys","Dramaattisuus","Pitkävihaisuus","Mustasukkaisuus"]
+  },
+  {
+    fi: "Leijona", glyph: "♌", start: [7,23], end: [8,22], el: "Tuli", planet: "Aurinko",
+    tagline: "Näyttävä ja reilu hahmo",
+    kuvaus: "Leijona täyttää tilan astumatta sisään — läsnäolo on luonnostaan voimakas. Tämä merkki rakentaa oman arvomaailmansa ja elää sen mukaan avoimesti, ilman pahoitteluja. Anteliaisuus ja rehtiys ovat aitoja: läheisiä suojellaan ja heidän puolellaan seistään tiukastikin. Haavoittuvuus piilee herkkänahkaisuudessa — arvostelu tuntuu hyökkäykseltä, vaikka se ei sitä olisi.",
+    rakkaus: "Rakkaussuhteissa leijonalle sopivat lyhyet ja hilpeät suhteet, mutta sen lojaali luonne sopii myös pidempään suhteeseen.",
+    vahvuudet: ["Anteliaisuus","Luovuus","Johtajuus","Huumorintaju","Oikeudentaju"],
+    heikkoudet: ["Itsekeskeisyys","Ylpeys","Lapsellisuus"]
+  },
+  {
+    fi: "Neitsyt", glyph: "♍", start: [8,23], end: [9,22], el: "Maa", planet: "Merkurius",
+    tagline: "Älykäs ja kiinnostunut vaikuttaja",
+    kuvaus: "Neitsyt näkee kokonaisuuden yksityiskohdista käsin — pienetkin epäjohdonmukaisuudet huomataan heti. Tämä tekee siitä poikkeuksellisen tarkan ja luotettavan tekijän, joka hoitaa asiansa kunnolla. Arjessa neitsyt on käytännöllinen ja kiltti, ei turhia dramatisoiva. Vaatimustaso on kuitenkin kova — ennen kaikkea itseä kohtaan. Täydellisyyden tavoittelu voi käydä raskaaksi.",
+    rakkaus: "Neitsyt viihtyy kumppanin kanssa, joka haastaa häntä sopivasti ja jonka kanssa voi puhua mistä vain.",
+    vahvuudet: ["Analyyttisyys","Tarkkuus","Älykkyys","Käytännöllisyys","Kiltteys"],
+    heikkoudet: ["Itsekriittisyys","Huolestuneisuus","Ylisuorittaminen"]
+  },
+  {
+    fi: "Vaaka", glyph: "♎", start: [9,23], end: [10,22], el: "Ilma", planet: "Venus",
+    tagline: "Välittävä ja utelias",
+    kuvaus: "Vaaka kukoistaa ihmisten parissa — se on kiinnostunut muista aidosti ja osaa luoda yhteyden lähes keneen tahansa. Harmonian kaipuu ulottuu yksityiselämästä laajempiin yhteiskunnallisiin kysymyksiin: epäoikeudenmukaisuus hiertää. Vaikein hetki on valitseminen: kaikkia vaihtoehtoja punnittaessa aika kuluu, ja yksin jääminen tuntuu epämukavalta ratkaisulta.",
+    rakkaus: "Vaaka on rakkaussuhteissa intohimoinen ja innostunut. Syvempi rakkaus löytyy ihmisen kanssa, joka on älyllisesti samalla tasolla.",
+    vahvuudet: ["Diplomaattisuus","Hurmaavuus","Tasapainoisuus","Sosiaalisuus","Oikeudenmukaisuus"],
+    heikkoudet: ["Päättämättömyys","Huomionkaipuu","Riippuvuus muista"]
+  },
+  {
+    fi: "Skorpioni", glyph: "♏", start: [10,23], end: [11,21], el: "Vesi", planet: "Pluto",
+    tagline: "Viehkeä ja salaperäinen",
+    kuvaus: "Pintapuolinen ei riitä skorpionille — se haluaa ymmärtää, mitä pinnan alla todella liikkuu. Tästä syntyy magneettimainen vetovoima: syvyys kiinnostaa muita. Fyysinen oleminen on tärkeää; elämä koetaan koko keholla. Läheisyyteen päästetään vain harvoja, ja omia kortteja ei paljasteta helposti — mikä voi jättää muut etäisyyden päähän.",
+    rakkaus: "Skorpioni hurmaa seksikkyydellään ja viehättävyydellään, mutta voi olla kumppanina vaikea lukea. Pitkällä tähtäimellä haluaa jakaa tärkeän ihmisen kanssa kehonsa ja sielunsa.",
+    vahvuudet: ["Syvällisyys","Intensiivisyys","Tunnetaidot","Päättäväisyys","Mystisyys"],
+    heikkoudet: ["Salaperäisyys","Mustasukkaisuus","Manipulatiivisuus"]
+  },
+  {
+    fi: "Jousimies", glyph: "♐", start: [11,22], end: [12,21], el: "Tuli", planet: "Jupiter",
+    tagline: "Valoisa optimisti ja oikeuden puolustaja",
+    kuvaus: "Jousimies suhtautuu elämään kuten pitkään matkaan — kiinnostavaa on sekä määränpää että tie sinne. Tämä merkki vetää muita mukaansa positiivisuudellaan, ja sen rinnalla asiat tuntuvat mahdollisilta. Omat arvot ovat selkeitä eikä niistä tingitä. Korkeat odotukset ovat kaksiteräinen miekka: itselle ja läheisille asetettu rimaa ei lasketa helposti.",
+    rakkaus: "Jousimies on rakkaudessa vaativa, mutta kun se oikea löytyy, ei ole paluuta.",
+    vahvuudet: ["Optimismi","Seikkailullisuus","Oikeudenmukaisuus","Filosofisuus","Avoimuus"],
+    heikkoudet: ["Kärsimättömyys","Vaativuus","Herkkyys"]
+  },
+  {
+    fi: "Kauris", glyph: "♑", start: [12,22], end: [1,19], el: "Maa", planet: "Saturnus",
+    tagline: "Huumorintajuinen ja kurinalainen",
+    kuvaus: "Kauris rakentaa elämäänsä kestävästi — lyhytjänteiset ratkaisut eivät houkuttele, koska katse on aina hieman pidemmällä. Järjestelmällisyys ja vastuullisuus ovat todellisia vahvuuksia, eivät pelkkää julkisivua. Ensikohtaamisessa kauris voi vaikuttaa pidättyväiseltä, mutta lähipiirille se avautuu yllättävänkin lämpimänä ja hauskana. Hermot voivat kiristyä nopeasti paineessa.",
+    rakkaus: "Kauris viihtyy ennemmin pitkässä suhteessa yhden ihmisen kanssa kuin nopeasti leimahtavissa hetkissä.",
+    vahvuudet: ["Kurinalaisuus","Sitkeys","Käytännöllisyys","Huumorintaju","Vastuullisuus"],
+    heikkoudet: ["Hermostuneisuus","Ylimielisyys","Jäykkyys"]
+  },
+  {
+    fi: "Vesimies", glyph: "♒", start: [1,20], end: [2,18], el: "Ilma", planet: "Uranus",
+    tagline: "Kiltti ja syvällinen oivaltaja",
+    kuvaus: "Vesimies ajattelee tavalla, joka ei mahdu tavallisiin muotteihin — ideat ovat omaperäisiä ja usein aikaansa edellä. Lähestymistapa ihmisiin on leikkisä ja avoin, ystävystyminenkin käy vaivattomasti. Syvimmät motiivit ovat kuitenkin harvoin omien etujen ajaminen: vesimies haluaa oikeasti vaikuttaa yhteiseen hyvään. Vapaus on ehto kaikelle — liian tiivis side tuntuu ahtaalta kumpaankin suuntaan.",
+    rakkaus: "Vesimies voi olla röyhkeä ja laittaa omat tarpeensa edelle, mutta osaa vietellä toisen takaisin. Ei pidä riippuvuudesta — viihtyy myös sinkkuna.",
+    vahvuudet: ["Oivaltavuus","Itsenäisyys","Luovuus","Empaattisuus","Idealismi"],
+    heikkoudet: ["Itsepäisyys","Pinnallisuus","Etäisyys"]
+  },
+  {
+    fi: "Kalat", glyph: "♓", start: [2,19], end: [3,20], el: "Vesi", planet: "Neptunus",
+    tagline: "Kenties tunneälykkäin merkki",
+    kuvaus: "Kalat on merkki, joka elää lähellä pinnan alla virtaavia tunteita — sekä omia että muiden. Tunneilmasto rekisteröityy ennen sanoja, ja tämä tekee kaloista poikkeuksellisen empaattisen läsnäolon. Sisäinen maailma on rikas ja alati uusiutuva. Rakkaudessa kalat on koko sydämellään mukana, mutta taipumus nähdä ihmiset parhaassa mahdollisessa valossa voi joskus johtaa pettymyksiin.",
+    rakkaus: "Kalat on äärimmäisen romanttinen ja ihastuu helposti. Oikean kumppanin löytäminen voi kestää, sillä kalat romantisoi vahingossa täysin väärätkin tyypit.",
+    vahvuudet: ["Tunneäly","Intuitio","Empaattisuus","Resilienssi","Luovuus"],
+    heikkoudet: ["Tunnepohjainen päätöksenteko","Haaveilevuus","Rajattomuus"]
+  },
+];
+
+const DATES = ["21.3–19.4","20.4–20.5","21.5–20.6","21.6–22.7","23.7–22.8","23.8–22.9","23.9–22.10","23.10–21.11","22.11–21.12","22.12–19.1","20.1–18.2","19.2–20.3"];
+
+let API_KEY = localStorage.getItem('horoApiKey') || '';
+
+function saveKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (val) {
+    API_KEY = val;
+    localStorage.setItem('horoApiKey', val);
+    document.getElementById('apiStatus').textContent = '✓ Tallennettu';
+    document.getElementById('apiStatus').className = 'api-status ok';
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (API_KEY) {
+    document.getElementById('apiKeyInput').value = API_KEY;
+    document.getElementById('apiStatus').textContent = '✓ Tallennettu';
+    document.getElementById('apiStatus').className = 'api-status ok';
+  }
+});
+
+function getSignFromDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr), m = d.getMonth()+1, day = d.getDate();
+  for (let i=0; i<SIGNS.length; i++) {
+    const {start:[sm,sd], end:[em,ed]} = SIGNS[i];
+    if (sm <= em) { if ((m===sm&&day>=sd)||(m===em&&day<=ed)||(m>sm&&m<em)) return i; }
+    else { if ((m===sm&&day>=sd)||(m===em&&day<=ed)||m>sm||m<em) return i; }
+  }
+  return null;
+}
+
+
+// ── Oma päivämäärävalitsin ──────────────────────────────────────────────
+function daysInMonth(m, y) {
+  return new Date(y, m, 0).getDate();
+}
+
+function createDatePicker(containerId, onChangeCb) {
+  const container = document.getElementById(containerId);
+  const state = { d: null, m: null, y: null };
+  const MIN_YEAR = 1920, MAX_YEAR = new Date().getFullYear();
+
+  function notify() {
+    if (onChangeCb) onChangeCb(getDateStr());
+  }
+
+  function getDateStr() {
+    if (state.d && state.m && state.y) {
+      return `${state.y}-${String(state.m).padStart(2,'0')}-${String(state.d).padStart(2,'0')}`;
+    }
+    return null;
+  }
+
+  function clampDay() {
+    if (state.d && state.m && state.y) {
+      const maxD = daysInMonth(state.m, state.y);
+      if (state.d > maxD) state.d = maxD;
+    }
+  }
+
+  function render() {
+    const dVal = state.d !== null ? String(state.d).padStart(2,'0') : '';
+    const mVal = state.m !== null ? String(state.m).padStart(2,'0') : '';
+    const yVal = state.y !== null ? String(state.y) : '';
+
+    container.innerHTML = `
+      <div class="date-picker">
+        <div class="date-field day">
+          <label>Päivä</label>
+          <div class="date-spinner">
+            <button class="spin-btn" onclick="dateSpin('${containerId}','d',1)">▲</button>
+            <input class="spin-input" type="text" inputmode="numeric" maxlength="2"
+              placeholder="pp" value="${dVal}"
+              onchange="dateInputChange('${containerId}','d',this.value)"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+            <button class="spin-btn" onclick="dateSpin('${containerId}','d',-1)">▼</button>
+          </div>
+        </div>
+        <div class="date-field month">
+          <label>Kuukausi</label>
+          <div class="date-spinner">
+            <button class="spin-btn" onclick="dateSpin('${containerId}','m',1)">▲</button>
+            <input class="spin-input" type="text" inputmode="numeric" maxlength="2"
+              placeholder="kk" value="${mVal}"
+              onchange="dateInputChange('${containerId}','m',this.value)"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+            <button class="spin-btn" onclick="dateSpin('${containerId}','m',-1)">▼</button>
+          </div>
+        </div>
+        <div class="date-field year">
+          <label>Vuosi</label>
+          <div class="date-spinner">
+            <button class="spin-btn" onclick="dateSpin('${containerId}','y',1)">▲</button>
+            <input class="spin-input" type="text" inputmode="numeric" maxlength="4"
+              placeholder="vvvv" value="${yVal}"
+              onchange="dateInputChange('${containerId}','y',this.value)"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+            <button class="spin-btn" onclick="dateSpin('${containerId}','y',-1)">▼</button>
+          </div>
+        </div>
+        <div class="date-reset-wrap">
+          <label>Poista tiedot</label>
+          <button class="date-reset" onclick="dateReset('${containerId}')" title="Tyhjennä">✕</button>
+        </div>
+      </div>`;
+  }
+
+  function spin(field, dir) {
+    if (field === 'd') {
+      const maxD = (state.m && state.y) ? daysInMonth(state.m, state.y) : 31;
+      if (state.d === null) state.d = dir > 0 ? 1 : maxD;
+      else { state.d += dir; if (state.d < 1) state.d = maxD; if (state.d > maxD) state.d = 1; }
+    } else if (field === 'm') {
+      if (state.m === null) state.m = dir > 0 ? 1 : 12;
+      else { state.m += dir; if (state.m < 1) state.m = 12; if (state.m > 12) state.m = 1; }
+      clampDay();
+    } else if (field === 'y') {
+      if (state.y === null) state.y = dir > 0 ? MIN_YEAR : MAX_YEAR;
+      else { state.y += dir; if (state.y < MIN_YEAR) state.y = MAX_YEAR; if (state.y > MAX_YEAR) state.y = MIN_YEAR; }
+      clampDay();
+    }
+    render();
+    notify();
+  }
+
+  function inputChange(field, raw) {
+    const n = parseInt(raw, 10);
+    if (isNaN(n)) return;
+    if (field === 'd') {
+      if (n >= 1 && n <= 31) { state.d = n; clampDay(); }
+    } else if (field === 'm') {
+      if (n >= 1 && n <= 12) { state.m = n; clampDay(); }
+    } else if (field === 'y') {
+      if (n >= MIN_YEAR && n <= MAX_YEAR) state.y = n;
+    }
+    notify();
+  }
+
+  function reset() {
+    state.d = null; state.m = null; state.y = null;
+    render();
+    notify();
+  }
+
+  render();
+  return { spin, reset, getDateStr, inputChange };
+}
+
+// Registry
+const DATE_PICKERS = {};
+
+function dateSpin(id, field, dir) {
+  if (DATE_PICKERS[id]) DATE_PICKERS[id].spin(field, dir);
+}
+function dateReset(id) {
+  if (DATE_PICKERS[id]) DATE_PICKERS[id].reset();
+}
+function dateInputChange(id, field, val) {
+  if (DATE_PICKERS[id]) DATE_PICKERS[id].inputChange(field, val);
+}
+
+// Alustus
+window.addEventListener('DOMContentLoaded', () => {
+  DATE_PICKERS['bdayDatePicker'] = createDatePicker('bdayDatePicker', (dateStr) => {
+    if (dateStr) {
+      const idx = getSignFromDate(dateStr);
+      const el = document.getElementById('detectedSign');
+      if (idx !== null) { el.style.display='block'; el.textContent=`${SIGNS[idx].glyph} ${SIGNS[idx].fi} · ${SIGNS[idx].el} · ${SIGNS[idx].planet}`; }
+      else el.style.display='none';
+    } else {
+      clearDetectedSign();
+    }
+  });
+
+  DATE_PICKERS['p1datePicker'] = createDatePicker('p1datePicker', (dateStr) => {
+    if (dateStr) {
+      const idx = getSignFromDate(dateStr);
+      if (idx !== null) {
+        document.getElementById('p1sign').value = idx;
+        const el = document.getElementById('p1detected');
+        el.style.display='block';
+        el.textContent=`${SIGNS[idx].glyph} ${SIGNS[idx].fi} · ${SIGNS[idx].el} · ${SIGNS[idx].planet}`;
+      }
+    } else { clearDetected(1); }
+  });
+
+  DATE_PICKERS['p2datePicker'] = createDatePicker('p2datePicker', (dateStr) => {
+    if (dateStr) {
+      const idx = getSignFromDate(dateStr);
+      if (idx !== null) {
+        document.getElementById('p2sign').value = idx;
+        const el = document.getElementById('p2detected');
+        el.style.display='block';
+        el.textContent=`${SIGNS[idx].glyph} ${SIGNS[idx].fi} · ${SIGNS[idx].el} · ${SIGNS[idx].planet}`;
+      }
+    } else { clearDetected(2); }
+  });
+});
+
+// Päivitä showBdayBase ja detectSign käyttämään pickeriä
+
+function clearIfFilled(input, callback) {
+  if (input.value) {
+    input.value = '';
+    if (callback) callback();
+  }
+}
+
+function clearDetectedSign() {
+  const el = document.getElementById('detectedSign');
+  el.style.display = 'none';
+  el.textContent = '';
+}
+
+function clearDetected(num) {
+  const el = document.getElementById(`p${num}detected`);
+  el.style.display = 'none';
+  el.textContent = '';
+  document.getElementById(`p${num}sign`).value = '';
+}
+
+
+function detectSign() {
+  // Hoidetaan pickerin callback:ssa
+}
+
+function detectSign2(num) {
+  // Hoidetaan pickerin callback:ssa
+}
+
+function switchTab(name) {
+  ['merkit','syntyma','compat'].forEach((n,i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', n===name);
+    document.getElementById('panel-'+n).classList.toggle('active', n===name);
+  });
+}
+
+function kwHtml(list, cls) {
+  return list.map(k => `<span class="kw ${cls}">${k}</span>`).join('');
+}
+
+function signCardHtml(s, idx) {
+  return `
+    <div class="result-header">
+      <span class="result-glyph">${s.glyph}</span>
+      <div>
+        <div class="result-name">${s.fi}</div>
+        <div class="result-tagline">${s.tagline}</div>
+        <div class="result-dates">${DATES[idx]} &nbsp;·&nbsp; ${s.el} &nbsp;·&nbsp; ${s.planet}</div>
+      </div>
+    </div>
+
+    <p class="section-label">Luonnehoroskooppi</p>
+    <div class="desc-block">${s.kuvaus}</div>
+
+    <div class="two-col">
+      <div class="trait-box">
+        <h4>✦ VAHVUUDET</h4>
+        <div class="keywords">${kwHtml(s.vahvuudet, 'kw-str')}</div>
+      </div>
+      <div class="trait-box">
+        <h4>⚡ HAASTEET</h4>
+        <div class="keywords">${kwHtml(s.heikkoudet, 'kw-wk')}</div>
+      </div>
+    </div>
+
+    <div class="love-box">
+      <h4>♥ RAKKAUS &amp; SUHTEET</h4>
+      <p>${s.rakkaus}</p>
+    </div>
+    ${API_KEY ? `<p class="section-label">Mystinen tulkinta</p><p class="loading" id="aiExtra">✦ Ladataan...</p>` : ''}
+  `;
+}
+
+// Build grid
+const grid = document.getElementById('signsGrid');
+let currentSignBtn = null;
+SIGNS.forEach((s,i) => {
+  const btn = document.createElement('button');
+  btn.className = 'sign-btn';
+  btn.innerHTML = `<span class="glyph">${s.glyph}</span><span>${s.fi}</span><span class="elname">${s.el}</span>`;
+  btn.onclick = () => {
+    if (currentSignBtn) currentSignBtn.classList.remove('selected');
+    btn.classList.add('selected');
+    currentSignBtn = btn;
+    document.getElementById('signResult').innerHTML = signCardHtml(s, i);
+    if (API_KEY) loadSignAI(i);
+  };
+  grid.appendChild(btn);
+});
+
+['p1sign','p2sign'].forEach(id => {
+  const sel = document.getElementById(id);
+  SIGNS.forEach((s,i) => {
+    const o = document.createElement('option'); o.value=i; o.textContent=`${s.glyph} ${s.fi}`; sel.appendChild(o);
+  });
+});
+
+async function claudeAPI(prompt) {
+  if (!API_KEY) throw new Error('API-avain puuttuu.');
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": API_KEY, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, messages: [{ role: "user", content: prompt }] })
+  });
+  if (!resp.ok) { const e = await resp.json().catch(()=>({})); throw new Error(e?.error?.message || `HTTP ${resp.status}`); }
+  const data = await resp.json();
+  return data.content.map(c => c.text||'').join('');
+}
+
+async function loadSignAI(idx) {
+  const s = SIGNS[idx];
+  try {
+    const text = await claudeAPI(
+      `Olet mystinen astrologi. Tässä on kuvaus merkistä ${s.fi}: "${s.kuvaus}"
+
+Kirjoita noin 80–100 sanaa runollinen, mystinen syventävä näkökulma suomeksi. Älä toista samoja asioita — tuo esiin merkin kosminen olemus ja henkinen ulottuvuus. Vain virtaava teksti, ei otsikoita.`
+    );
+    const el = document.getElementById('aiExtra');
+    if (el) el.outerHTML = `<div class="ai-text">${text}</div>`;
+  } catch(e) {
+    const el = document.getElementById('aiExtra');
+    if (el) el.outerHTML = `<p class="error-small">AI ei saatavilla: ${e.message}</p>`;
+  }
+}
+
+function showBdayBase() {
+  const dateVal = DATE_PICKERS['bdayDatePicker'] ? DATE_PICKERS['bdayDatePicker'].getDateStr() : null;
+  const box = document.getElementById('bdayResult');
+  if (!dateVal) { box.innerHTML=`<p class="error-text">Anna ensin syntymäpäiväsi.</p>`; return; }
+  const idx = getSignFromDate(dateVal);
+  if (idx===null) { box.innerHTML=`<p class="error-text">Merkin tunnistaminen epäonnistui.</p>`; return; }
+  const s = SIGNS[idx];
+  const dateStr = new Date(dateVal).toLocaleDateString('fi-FI');
+  box.innerHTML = `
+    <div class="result-header">
+      <span class="result-glyph">${s.glyph}</span>
+      <div><div class="result-name">${s.fi} · ${dateStr}</div><div class="result-tagline">${s.tagline}</div><div class="result-dates">${s.el} · ${s.planet}</div></div>
+    </div>
+    <p class="section-label">Luonnehoroskooppi</p>
+    <div class="desc-block">${s.kuvaus}</div>
+    <div class="two-col">
+      <div class="trait-box"><h4>✦ VAHVUUDET</h4><div class="keywords">${kwHtml(s.vahvuudet,'kw-str')}</div></div>
+      <div class="trait-box"><h4>⚡ HAASTEET</h4><div class="keywords">${kwHtml(s.heikkoudet,'kw-wk')}</div></div>
+    </div>
+    <div class="love-box"><h4>♥ RAKKAUS &amp; SUHTEET</h4><p>${s.rakkaus}</p></div>`;
+}
+
+async function analyzeFromBday() {
+  const dateVal = DATE_PICKERS['bdayDatePicker'] ? DATE_PICKERS['bdayDatePicker'].getDateStr() : null;
+  const timeVal = document.getElementById('bdayTime').value;
+  const box = document.getElementById('bdayResult');
+  if (!dateVal) { box.innerHTML=`<p class="error-text">Anna ensin syntymäpäiväsi.</p>`; return; }
+  const idx = getSignFromDate(dateVal);
+  if (idx===null) { box.innerHTML=`<p class="error-text">Merkin tunnistaminen epäonnistui.</p>`; return; }
+  const s = SIGNS[idx];
+  const dateStr = new Date(dateVal).toLocaleDateString('fi-FI');
+  const timeStr = timeVal ? ` klo ${timeVal}` : '';
+  box.innerHTML=`<p class="loading">✦ Tähtikarttoasi tulkitaan...</p>`;
+  try {
+    const text = await claudeAPI(
+      `Olet mystinen astrologi. Tässä on kuvaus merkistä ${s.fi}: "${s.kuvaus}" Rakkaus: "${s.rakkaus}"
+
+Henkilö on syntynyt ${dateStr}${timeStr}. Kirjoita henkilökohtainen, runollinen horoskoopianalyysi (noin 150 sanaa) suomeksi. Mainitse syntymäpäivä luontevasti. Syventä kuvausta — tuo esiin elämänpolku, vahvuudet, haasteet ja kosminen merkitys. Lämmin mystinen tyyli, ei otsikoita.`
+    );
+    box.innerHTML = `
+      <div class="result-header">
+        <span class="result-glyph">${s.glyph}</span>
+        <div><div class="result-name">${s.fi} · ${dateStr}</div><div class="result-tagline">${s.tagline}</div><div class="result-dates">${s.el} · ${s.planet}</div></div>
+      </div>
+      <p class="section-label">Luonnehoroskooppi</p>
+      <div class="desc-block">${s.kuvaus}</div>
+      <div class="two-col">
+        <div class="trait-box"><h4>✦ VAHVUUDET</h4><div class="keywords">${kwHtml(s.vahvuudet,'kw-str')}</div></div>
+        <div class="trait-box"><h4>⚡ HAASTEET</h4><div class="keywords">${kwHtml(s.heikkoudet,'kw-wk')}</div></div>
+      </div>
+      <div class="love-box"><h4>♥ RAKKAUS &amp; SUHTEET</h4><p>${s.rakkaus}</p></div>
+      <div class="divider"></div>
+      <p class="section-label">Henkilökohtainen analyysi</p>
+      <div class="ai-text">${text}</div>`;
+  } catch(e) {
+    box.innerHTML=`<p class="error-text">AI-analyysi epäonnistui.</p><p class="error-small">${e.message}</p>`;
+  }
+}
+
+// ── Yhteensopivuuslogiikka ──────────────────────────────────────────────
+// Elementtien yhteensopivuus
+const EL_COMPAT = {
+  'Tuli':  { 'Tuli': [88,85,75], 'Ilma': [82,88,80], 'Maa': [52,60,65], 'Vesi': [48,55,50] },
+  'Ilma':  { 'Tuli': [82,88,80], 'Ilma': [78,90,82], 'Maa': [55,62,70], 'Vesi': [50,58,55] },
+  'Maa':   { 'Tuli': [52,60,65], 'Ilma': [55,62,70], 'Maa': [85,80,88], 'Vesi': [80,78,85] },
+  'Vesi':  { 'Tuli': [48,55,50], 'Ilma': [50,58,55], 'Maa': [80,78,85], 'Vesi': [85,82,75] },
+};
+
+// Merkkiparien erityiset säädöt [rakkaus, ystävyys, työ]
+const PAIR_TWEAK = {
+  '0-4':[+8,+5,+3],  // Oinas–Leijona (tuli+tuli johtajat)
+  '0-8':[+5,+8,+5],  // Oinas–Jousimies
+  '1-5':[+7,+5,+8],  // Härkä–Neitsyt (maa+maa)
+  '1-9':[+6,+6,+7],  // Härkä–Kauris
+  '2-6':[+7,+8,+5],  // Kaksoset–Vaaka (ilma+ilma)
+  '2-10':[+5,+7,+6], // Kaksoset–Vesimies
+  '3-7':[+8,+6,+4],  // Rapu–Skorpioni (vesi+vesi)
+  '3-11':[+7,+7,+5], // Rapu–Kalat
+  '7-11':[+6,+6,+4], // Skorpioni–Kalat
+  '5-9':[+5,+6,+8],  // Neitsyt–Kauris
+  '6-10':[+6,+7,+5], // Vaaka–Vesimies
+  '4-8':[+5,+7,+6],  // Leijona–Jousimies
+  '0-6':[+3,+5,-2],  // Oinas–Vaaka (vastakohdat)
+  '1-7':[+4,+3,-3],  // Härkä–Skorpioni
+  '2-8':[+3,+6,-1],  // Kaksoset–Jousimies
+  '3-9':[+2,+4,-2],  // Rapu–Kauris
+  '4-10':[+2,+3,-3], // Leijona–Vesimies
+  '5-11':[+3,+4,-1], // Neitsyt–Kalat
+};
+
+function getPairKey(i1, i2) {
+  const a = Math.min(i1,i2), b = Math.max(i1,i2);
+  return `${a}-${b}`;
+}
+
+function clamp(v) { return Math.max(30, Math.min(98, Math.round(v))); }
+
+function calcScores(i1, i2) {
+  const s1 = SIGNS[i1], s2 = SIGNS[i2];
+  const base = EL_COMPAT[s1.el][s2.el];
+  let [r, y, t] = [base[0], base[1], base[2]];
+  const tweak = PAIR_TWEAK[getPairKey(i1,i2)];
+  if (tweak) { r+=tweak[0]; y+=tweak[1]; t+=tweak[2]; }
+  // sama merkki itsensä kanssa
+  if (i1===i2) { r=78; y=92; t=80; }
+  return { rakkaus: clamp(r), ystavyys: clamp(y), tyo: clamp(t) };
+}
+
+// Löytää yhteiset vahvuudet ja törmäykset
+function sharedTraits(s1, s2) {
+  const shared = s1.vahvuudet.filter(v => s2.vahvuudet.includes(v));
+  const clash  = s1.heikkoudet.filter(h => s2.heikkoudet.includes(h));
+  return { shared, clash };
+}
+
+// Elementtiparien luonnekuvaukset
+const EL_DESC = {
+  'Tuli-Tuli':   'Kaksi tulista persoonaa yhdessä synnyttää energiaa ja intoa — mutta myös kilpailua. Kumpikaan ei helposti myönnä olevansa väärässä.',
+  'Ilma-Ilma':   'Kaksi ilmamerkkiä löytää toisistaan ajattelukumppanin. Keskustelua riittää, ja yhteiset ideat kukkivat. Arjen konkretia voi jäädä molemmilta vähemmälle.',
+  'Maa-Maa':     'Maaelementtien välillä vallitsee luontainen ymmärrys: molemmat arvostavat vakautta, käytännöllisyyttä ja pitkäjänteisyyttä. Muutos on molemmille hidasta.',
+  'Vesi-Vesi':   'Vesimerkit jakavat syvän tunneviisauden — tunteet virtaavat avoimesti ja toisen aistiminen on helppoa. Vaara on, että tunteet vyöryvät yli reunojen.',
+  'Tuli-Ilma':   'Tuli ja ilma ruokkivat toisiaan: ilma antaa tulelle tilaa palaa, tuli lämmittää ilmaa. Yhdessä syntyy inspiraatiota ja liikettä.',
+  'Ilma-Tuli':   'Tuli ja ilma ruokkivat toisiaan: ilma antaa tulelle tilaa palaa, tuli lämmittää ilmaa. Yhdessä syntyy inspiraatiota ja liikettä.',
+  'Maa-Vesi':    'Maa ja vesi täydentävät toisiaan kauniisti — vesi tuo tunteen ja intuitiivisen syvyyden, maa antaa rakenteen ja turvan.',
+  'Vesi-Maa':    'Maa ja vesi täydentävät toisiaan kauniisti — vesi tuo tunteen ja intuitiivisen syvyyden, maa antaa rakenteen ja turvan.',
+  'Tuli-Maa':    'Tuli haluaa liikehtia, maa pysyä paikoillaan. Kumpikaan ei luonnostaan anna periksi. Parhaimmillaan maa ankkuroi tulen ideat todeksi.',
+  'Maa-Tuli':    'Tuli haluaa liikehtia, maa pysyä paikoillaan. Kumpikaan ei luonnostaan anna periksi. Parhaimmillaan maa ankkuroi tulen ideat todeksi.',
+  'Tuli-Vesi':   'Tuli ja vesi ovat luonteeltaan vastakkaisia — yksi syttyy, toinen sammuttaa. Jännite on todellinen, mutta juuri se voi tehdä suhteesta intensiivisen.',
+  'Vesi-Tuli':   'Tuli ja vesi ovat luonteeltaan vastakkaisia — yksi syttyy, toinen sammuttaa. Jännite on todellinen, mutta juuri se voi tehdä suhteesta intensiivisen.',
+  'Ilma-Maa':    'Ilma kaipaa vapautta ja uutta, maa rakastaa tuttua ja vakaata. Erimielisyyttä syntyy helposti tahdista, mutta erot voivat myös täydentää toisiaan.',
+  'Maa-Ilma':    'Ilma kaipaa vapautta ja uutta, maa rakastaa tuttua ja vakaata. Erimielisyyttä syntyy helposti tahdista, mutta erot voivat myös täydentää toisiaan.',
+  'Ilma-Vesi':   'Ilma lähestyy maailmaa ajattelun kautta, vesi tunteiden. Suhteessa voidaan oppia paljon toiselta — jos erilaisuutta osataan arvostaa.',
+  'Vesi-Ilma':   'Ilma lähestyy maailmaa ajattelun kautta, vesi tunteiden. Suhteessa voidaan oppia paljon toiselta — jos erilaisuutta osataan arvostaa.',
+};
+
+// Partitiivit vahvuuksille
+const PARTITIVE = {
+  'Rohkeus':'rohkeutta','Itsevarmuus':'itsevarmuutta','Aloitekyky':'aloitekykyä',
+  'Intohimoisuus':'intohimoisuutta','Rehellisyys':'rehellisyyttä',
+  'Sitkeys':'sitkeyttä','Kärsivällisyys':'kärsivällisyyttä','Lojaalius':'lojaalius',
+  'Lojaalius':'lojaaliutta','Sydämellisyys':'sydämellisyyttä','Aikaansaavuus':'aikaansaavuutta',
+  'Vilkkaus':'vilkkautta','Sopeutuvuus':'sopeutuvuutta','Uteliaisuus':'uteliaisuutta',
+  'Sosiaalisuus':'sosiaalisuutta','Nopea-älyisyys':'nopea-älyisyyttä',
+  'Empaattisuus':'empaattisuutta','Intuitio':'intuitiota','Myötätunto':'myötätuntoa',
+  'Suojeluvaisto':'suojeluvaistoaan','Hellä':'hellää lämpöä',
+  'Anteliaisuus':'anteliaisuutta','Luovuus':'luovuutta','Johtajuus':'johtajuutta',
+  'Kunnianhimoisuus':'kunnianhimoa','Elinvoimaisuus':'elinvoimaisuutta',
+  'Tarkkuus':'tarkkuutta','Älykkyys':'älykkyyttä','Analyyttisyys':'analyyttisyyttä',
+  'Järjestelmällisyys':'järjestelmällisyyttä','Huolellisuus':'huolellisuutta',
+  'Kiltteys':'kiltteyttä',
+  'Diplomaattisuus':'diplomaattisuutta','Hurmaavuus':'hurmaavuutta',
+  'Tasapainoisuus':'tasapainoisuutta','Oikeudenmukaisuus':'oikeudenmukaisuutta',
+  'Syvällisyys':'syvällisyyttä','Intensiivisyys':'intensiivisyyttä',
+  'Mystisyys':'mystiikkaa','Päättäväisyys':'päättäväisyyttä',
+  'Optimismi':'optimismia','Seikkailullisuus':'seikkailullisuutta',
+  'Filosofisuus':'filosofisuutta','Avoimuus':'avoimuutta',
+  'Kurinalaisuus':'kurinalaisuutta','Käytännöllisyys':'käytännöllisyyttä',
+  'Tavoitteellisuus':'tavoitteellisuutta','Vastuullisuus':'vastuullisuutta',
+  'Huumorintaju':'huumorintajua',
+  'Oivaltavuus':'oivaltavuutta','Itsenäisyys':'itsenäisyyttä','Idealismi':'idealismia',
+  'Tunneäly':'tunneälyä','Resilienssi':'resilienssiä',
+};
+
+function toPartitive(word) {
+  return PARTITIVE[word] || word.toLowerCase() + 'a';
+}
+
+function buildCompatText(i1, i2, scores) {
+  const s1 = SIGNS[i1], s2 = SIGNS[i2];
+  if (i1 === i2) {
+    return `Kaksi ${s1.fi.toLowerCase()}ta yhdessä — yhteistä on paljon, ehkä liikaakin. ${s1.kuvaus} Molemmat tunnistavat toisessaan omat vahvuutensa ja heikkoutensa kuin peilistä, mikä voi olla yhtä aikaa helpottavaa ja haastavaa. Rakkaudessa yhteinen sävel löytyy nopeasti: ${s1.rakkaus.toLowerCase()} Ystävyys kukoistaa jaetun maailmankuvan varassa, mutta töissä samanlainen toimintatapa voi johtaa siihen, että kumpikin odottaa toisen tekevän sen osan, joka molemmilta jää helposti tekemättä.`;
+  }
+
+  const elKey = `${s1.el}-${s2.el}`;
+  const elDesc = EL_DESC[elKey] || '';
+  const { shared, clash } = sharedTraits(s1, s2);
+
+  let yhteista = '';
+  if (shared.length > 0) {
+    yhteista = ` Yhteistä maaperää löytyy: molemmat arvostavat ${shared.slice(0,2).map(v=>toPartitive(v)).join(' ja ')}.`;
+  }
+
+  let kitka = '';
+  if (clash.length > 0) {
+    kitka = ` Hankausta voi syntyä, kun molempien ${toPartitive(clash[0])} törmää toisiinsa.`;
+  }
+
+  let loveLine = '';
+  if (scores.rakkaus >= 80) {
+    loveLine = `Rakkaudessa yhteys on vahva — ${s1.rakkaus.toLowerCase()} ${s2.rakkaus.toLowerCase()}`;
+  } else if (scores.rakkaus >= 60) {
+    loveLine = `Rakkaus vaatii molemminpuolista joustoa — ${s1.rakkaus.toLowerCase()} ${s2.rakkaus.toLowerCase()}`;
+  } else {
+    loveLine = `Rakkauden polku ei ole suoraviivaisin — ${s1.rakkaus.toLowerCase()} ${s2.rakkaus.toLowerCase()}`;
+  }
+
+  let workLine = '';
+  if (scores.tyo >= 80) {
+    workLine = `Töissä nämä kaksi täydentävät toisiaan luontevasti.`;
+  } else if (scores.tyo >= 65) {
+    workLine = `Yhteistyö onnistuu, kun roolit ovat selkeät.`;
+  } else {
+    workLine = `Yhteistyössä kannattaa sopia pelisäännöistä etukäteen.`;
+  }
+
+  const s1vahv = s1.vahvuudet.slice(0,2).map(v=>toPartitive(v)).join(' ja ');
+  const s2vahv = s2.vahvuudet.slice(0,2).map(v=>toPartitive(v)).join(' ja ');
+
+  return `${elDesc}${yhteista}${kitka} ${s1.fi} tuo suhteeseen ${s1vahv}, ${s2.fi.toLowerCase()} puolestaan ${s2vahv}. ${loveLine} ${workLine}`;
+}
+
+function analyzeCompat() {
+  const i1 = parseInt(document.getElementById('p1sign').value);
+  const i2 = parseInt(document.getElementById('p2sign').value);
+  const box = document.getElementById('compatResult');
+  if (isNaN(i1)||isNaN(i2)) { box.innerHTML=`<p class="error-text">Valitse tai anna molempien syntymätiedot.</p>`; return; }
+  const s1=SIGNS[i1], s2=SIGNS[i2];
+  const scores = calcScores(i1, i2);
+  const teksti = buildCompatText(i1, i2, scores);
+
+  box.innerHTML = `
+    <div class="compat-header">
+      <div class="compat-sign"><div class="glyph">${s1.glyph}</div><div class="name">${s1.fi}</div></div>
+      <div class="compat-heart">♥</div>
+      <div class="compat-sign"><div class="glyph">${s2.glyph}</div><div class="name">${s2.fi}</div></div>
+    </div>
+    ${(() => {
+      const max = Math.max(scores.rakkaus, scores.ystavyys, scores.tyo);
+      let teksti, emoji;
+      if (scores.rakkaus === max) { teksti = 'RAKASTAVAISINA VÄLINNE OVAT PARHAIMMILLAAN'; emoji = '💕'; }
+      else if (scores.ystavyys === max) { teksti = 'TULETTE PARHAITEN TOIMEEN YSTÄVINÄ'; emoji = '🤝'; }
+      else { teksti = 'TYÖKAVEREINA TULETTE PARHAITEN TOIMEEN'; emoji = '💼'; }
+      return `<div class="best-match-box">${emoji} ${teksti} ${emoji}</div>`;
+    })()}
+    <div class="score-bar"><span class="score-label"><span class="score-emoji">💏</span> Rakkaus</span><div class="bar-track"><div class="bar-fill" data-val="${scores.rakkaus}"></div></div><span class="score-num">${scores.rakkaus}%</span></div>
+    <div class="score-bar"><span class="score-label"><span class="score-emoji">👯</span> Ystävyys</span><div class="bar-track"><div class="bar-fill" data-val="${scores.ystavyys}"></div></div><span class="score-num">${scores.ystavyys}%</span></div>
+    <div class="score-bar"><span class="score-label"><span class="score-emoji">👩‍🏫</span> Työ</span><div class="bar-track"><div class="bar-fill" data-val="${scores.tyo}"></div></div><span class="score-num">${scores.tyo}%</span></div>
+    <div class="divider"></div>
+    <p class="section-label">Yhteensopivuus</p>
+    <div class="ai-text">${teksti}</div>
+    <div class="divider"></div>
+    <div class="two-col">
+      <div class="trait-box"><h4>${s1.glyph} ${s1.fi.toUpperCase()} tuo</h4><div class="keywords">${kwHtml(s1.vahvuudet,'kw-str')}</div></div>
+      <div class="trait-box"><h4>${s2.glyph} ${s2.fi.toUpperCase()} tuo</h4><div class="keywords">${kwHtml(s2.vahvuudet,'kw-str')}</div></div>
+    </div>`;
+
+  setTimeout(() => { document.querySelectorAll('.bar-fill').forEach(el => { el.style.width=el.dataset.val+'%'; }); }, 100);
+}
+
+// Stars
+const starsEl = document.getElementById('stars');
+for (let i=0; i<120; i++) {
+  const s = document.createElement('div'); s.className='star';
+  const sz = Math.random()*2+1;
+  s.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--d:${2+Math.random()*5}s;--delay:${-Math.random()*6}s;--op:${.2+Math.random()*.8}`;
+  starsEl.appendChild(s);
+}
+</script>
+</body>
+</html>
