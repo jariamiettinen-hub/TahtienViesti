@@ -424,7 +424,8 @@ function signCardHtml(s,idx){
   return '<div class="result-header"><span class="result-glyph">'+s.glyph+'</span><div>'+
     '<div class="result-name">'+s.fi+'</div>'+
     '<div class="result-tagline">'+s.tagline+'</div>'+
-    '<div class="result-dates">'+DATES[idx]+' &nbsp;·&nbsp; '+s.el+' &nbsp;·&nbsp; '+s.planet+'</div>'+
+    '<div class="result-dates">'+DATES[idx]+'</div>'+
+    '<div class="result-dates">Elementti: '+s.el+' &nbsp;·&nbsp; Hallitseva planeetta: '+s.planet+'</div>'+
     '</div></div>'+
     '<p class="section-label">Luonnehoroskooppi</p>'+
     '<div class="desc-block">'+s.kuvaus+'</div>'+
@@ -555,7 +556,7 @@ function showBdayBase(){
   box.innerHTML='<div class="result-header"><span class="result-glyph">'+s.glyph+'</span>'+
     '<div><div class="result-name">'+s.fi+' · '+dateStr+'</div>'+
     '<div class="result-tagline">'+s.tagline+'</div>'+
-    '<div class="result-dates">'+s.el+' · '+s.planet+'</div></div></div>'+
+    '<div class="result-dates">Elementti: '+s.el+' &nbsp;·&nbsp; Hallitseva planeetta: '+s.planet+'</div></div></div>'+
     '<p class="section-label">Luonnehoroskooppi</p>'+
     '<div class="desc-block">'+s.kuvaus+'</div>'+
     '<div class="two-col">'+
