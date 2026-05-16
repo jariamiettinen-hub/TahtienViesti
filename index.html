@@ -114,6 +114,48 @@
   .compat-sign .name { font-size: 13px; color: #8b3a52; font-family: 'Cinzel', serif; }
   .compat-heart { font-size: 72px; color: #8a3a3a; }
   .best-match-box { background: #8b3a52; color: #fff; border-radius: 10px; padding: 1rem 1.25rem; text-align: center; font-family: 'Cinzel', serif; font-size: 14px; letter-spacing: .1em; margin-bottom: 1.25rem; }
+  .banner-emoji { font-size: 48px; vertical-align: middle; }
+
+  /* Bannerin overlay-efekti */
+  .best-match-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(139,58,82,.15);
+    backdrop-filter: blur(6px);
+    animation: overlayIn .4s ease forwards;
+  }
+  .best-match-overlay.hide {
+    animation: overlayOut .5s ease forwards;
+  }
+  @keyframes overlayIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes overlayOut {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+  }
+  .best-match-card {
+    background: #8b3a52;
+    color: #fff;
+    border-radius: 20px;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    max-width: 340px;
+    width: 88%;
+    font-family: 'Cinzel', serif;
+    box-shadow: 0 20px 60px rgba(139,58,82,.5);
+    animation: cardPop .5s cubic-bezier(.34,1.56,.64,1) forwards;
+  }
+  @keyframes cardPop {
+    from { transform: scale(.6); opacity: 0; }
+    to   { transform: scale(1);  opacity: 1; }
+  }
+  .best-match-card .card-emoji { font-size: 72px; display: block; margin-bottom: 1rem; animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
+  .best-match-card .card-text { font-size: 15px; letter-spacing: .12em; line-height: 1.7; }
+  .best-match-card .card-stars { font-size: 22px; margin-top: 1rem; opacity: .7; animation: shimmer 1.5s ease-in-out infinite; }
+  @keyframes shimmer { 0%,100%{opacity:.5} 50%{opacity:1} }
   .score-bar { display: flex; align-items: center; gap: 12px; margin: .9rem 0; }
   .score-label { font-size: 13px; color: #6a3040; min-width: 110px; display: flex; align-items: center; gap: 6px; }
   .score-emoji { font-size: 28px; line-height: 1; }
@@ -191,7 +233,6 @@
 </div>
 
 <script>
-// ── Merkkidata: yhdistetty Anna.fi + Seura.fi ──
 const SIGNS = [
   {
     fi: "Oinas", glyph: "♈", start: [3,21], end: [4,19], el: "Tuli", planet: "Mars",
@@ -293,589 +334,287 @@ const SIGNS = [
 
 const DATES = ["21.3–19.4","20.4–20.5","21.5–20.6","21.6–22.7","23.7–22.8","23.8–22.9","23.9–22.10","23.10–21.11","22.11–21.12","22.12–19.1","20.1–18.2","19.2–20.3"];
 
-let API_KEY = localStorage.getItem('horoApiKey') || '';
+function daysInMonth(m,y){return new Date(y,m,0).getDate();}
 
-function saveKey() {
-  const val = document.getElementById('apiKeyInput').value.trim();
-  if (val) {
-    API_KEY = val;
-    localStorage.setItem('horoApiKey', val);
-    document.getElementById('apiStatus').textContent = '✓ Tallennettu';
-    document.getElementById('apiStatus').className = 'api-status ok';
+function createDatePicker(containerId,onChangeCb){
+  var container=document.getElementById(containerId);
+  var state={d:null,m:null,y:null};
+  var MIN_YEAR=1920,MAX_YEAR=new Date().getFullYear();
+  function notify(){if(onChangeCb)onChangeCb(getDateStr());}
+  function getDateStr(){
+    if(state.d&&state.m&&state.y)
+      return state.y+'-'+String(state.m).padStart(2,'0')+'-'+String(state.d).padStart(2,'0');
+    return null;
   }
+  function clampDay(){
+    if(state.d&&state.m&&state.y){var mx=daysInMonth(state.m,state.y);if(state.d>mx)state.d=mx;}
+  }
+  function render(){
+    var dV=state.d!==null?String(state.d).padStart(2,'0'):'';
+    var mV=state.m!==null?String(state.m).padStart(2,'0'):'';
+    var yV=state.y!==null?String(state.y):'';
+    container.innerHTML='<div class="date-picker">'+
+      '<div class="date-field day"><label>Päivä</label><div class="date-spinner">'+
+      '<button class="spin-btn" onclick="dateSpin(\''+containerId+'\',\'d\',1)">▲</button>'+
+      '<input class="spin-input" type="text" inputmode="numeric" maxlength="2" placeholder="pp" value="'+dV+'" onchange="dateInputChange(\''+containerId+'\',\'d\',this.value)" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')"/>'+
+      '<button class="spin-btn" onclick="dateSpin(\''+containerId+'\',\'d\',-1)">▼</button>'+
+      '</div></div>'+
+      '<div class="date-field month"><label>Kuukausi</label><div class="date-spinner">'+
+      '<button class="spin-btn" onclick="dateSpin(\''+containerId+'\',\'m\',1)">▲</button>'+
+      '<input class="spin-input" type="text" inputmode="numeric" maxlength="2" placeholder="kk" value="'+mV+'" onchange="dateInputChange(\''+containerId+'\',\'m\',this.value)" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')"/>'+
+      '<button class="spin-btn" onclick="dateSpin(\''+containerId+'\',\'m\',-1)">▼</button>'+
+      '</div></div>'+
+      '<div class="date-field year"><label>Vuosi</label><div class="date-spinner">'+
+      '<button class="spin-btn" onclick="dateSpin(\''+containerId+'\',\'y\',1)">▲</button>'+
+      '<input class="spin-input" type="text" inputmode="numeric" maxlength="4" placeholder="vvvv" value="'+yV+'" onchange="dateInputChange(\''+containerId+'\',\'y\',this.value)" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')"/>'+
+      '<button class="spin-btn" onclick="dateSpin(\''+containerId+'\',\'y\',-1)">▼</button>'+
+      '</div></div>'+
+      '<div class="date-reset-wrap"><label>Poista tiedot</label>'+
+      '<button class="date-reset" onclick="dateReset(\''+containerId+'\')" title="Tyhjennä">✕</button>'+
+      '</div></div>';
+  }
+  function spin(field,dir){
+    if(field==='d'){var mx=(state.m&&state.y)?daysInMonth(state.m,state.y):31;if(state.d===null)state.d=dir>0?1:mx;else{state.d+=dir;if(state.d<1)state.d=mx;if(state.d>mx)state.d=1;}}
+    else if(field==='m'){if(state.m===null)state.m=dir>0?1:12;else{state.m+=dir;if(state.m<1)state.m=12;if(state.m>12)state.m=1;}clampDay();}
+    else if(field==='y'){if(state.y===null)state.y=dir>0?MIN_YEAR:MAX_YEAR;else{state.y+=dir;if(state.y<MIN_YEAR)state.y=MAX_YEAR;if(state.y>MAX_YEAR)state.y=MIN_YEAR;}clampDay();}
+    render();notify();
+  }
+  function inputChange(field,raw){
+    var n=parseInt(raw,10);if(isNaN(n))return;
+    if(field==='d'&&n>=1&&n<=31){state.d=n;clampDay();}
+    else if(field==='m'&&n>=1&&n<=12){state.m=n;clampDay();}
+    else if(field==='y'&&n>=MIN_YEAR&&n<=MAX_YEAR){state.y=n;}
+    notify();
+  }
+  function reset(){state.d=null;state.m=null;state.y=null;render();notify();}
+  render();
+  return {spin:spin,reset:reset,getDateStr:getDateStr,inputChange:inputChange};
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  if (API_KEY) {
-    document.getElementById('apiKeyInput').value = API_KEY;
-    document.getElementById('apiStatus').textContent = '✓ Tallennettu';
-    document.getElementById('apiStatus').className = 'api-status ok';
-  }
-});
+var DATE_PICKERS={};
+function dateSpin(id,field,dir){if(DATE_PICKERS[id])DATE_PICKERS[id].spin(field,dir);}
+function dateReset(id){if(DATE_PICKERS[id])DATE_PICKERS[id].reset();}
+function dateInputChange(id,field,val){if(DATE_PICKERS[id])DATE_PICKERS[id].inputChange(field,val);}
 
-function getSignFromDate(dateStr) {
-  if (!dateStr) return null;
-  const d = new Date(dateStr), m = d.getMonth()+1, day = d.getDate();
-  for (let i=0; i<SIGNS.length; i++) {
-    const {start:[sm,sd], end:[em,ed]} = SIGNS[i];
-    if (sm <= em) { if ((m===sm&&day>=sd)||(m===em&&day<=ed)||(m>sm&&m<em)) return i; }
-    else { if ((m===sm&&day>=sd)||(m===em&&day<=ed)||m>sm||m<em) return i; }
+function getSignFromDate(dateStr){
+  if(!dateStr)return null;
+  var d=new Date(dateStr),m=d.getMonth()+1,day=d.getDate();
+  for(var i=0;i<SIGNS.length;i++){
+    var sm=SIGNS[i].start[0],sd=SIGNS[i].start[1],em=SIGNS[i].end[0],ed=SIGNS[i].end[1];
+    if(sm<=em){if((m===sm&&day>=sd)||(m===em&&day<=ed)||(m>sm&&m<em))return i;}
+    else{if((m===sm&&day>=sd)||(m===em&&day<=ed)||m>sm||m<em)return i;}
   }
   return null;
 }
 
-
-// ── Oma päivämäärävalitsin ──────────────────────────────────────────────
-function daysInMonth(m, y) {
-  return new Date(y, m, 0).getDate();
-}
-
-function createDatePicker(containerId, onChangeCb) {
-  const container = document.getElementById(containerId);
-  const state = { d: null, m: null, y: null };
-  const MIN_YEAR = 1920, MAX_YEAR = new Date().getFullYear();
-
-  function notify() {
-    if (onChangeCb) onChangeCb(getDateStr());
-  }
-
-  function getDateStr() {
-    if (state.d && state.m && state.y) {
-      return `${state.y}-${String(state.m).padStart(2,'0')}-${String(state.d).padStart(2,'0')}`;
-    }
-    return null;
-  }
-
-  function clampDay() {
-    if (state.d && state.m && state.y) {
-      const maxD = daysInMonth(state.m, state.y);
-      if (state.d > maxD) state.d = maxD;
-    }
-  }
-
-  function render() {
-    const dVal = state.d !== null ? String(state.d).padStart(2,'0') : '';
-    const mVal = state.m !== null ? String(state.m).padStart(2,'0') : '';
-    const yVal = state.y !== null ? String(state.y) : '';
-
-    container.innerHTML = `
-      <div class="date-picker">
-        <div class="date-field day">
-          <label>Päivä</label>
-          <div class="date-spinner">
-            <button class="spin-btn" onclick="dateSpin('${containerId}','d',1)">▲</button>
-            <input class="spin-input" type="text" inputmode="numeric" maxlength="2"
-              placeholder="pp" value="${dVal}"
-              onchange="dateInputChange('${containerId}','d',this.value)"
-              oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
-            <button class="spin-btn" onclick="dateSpin('${containerId}','d',-1)">▼</button>
-          </div>
-        </div>
-        <div class="date-field month">
-          <label>Kuukausi</label>
-          <div class="date-spinner">
-            <button class="spin-btn" onclick="dateSpin('${containerId}','m',1)">▲</button>
-            <input class="spin-input" type="text" inputmode="numeric" maxlength="2"
-              placeholder="kk" value="${mVal}"
-              onchange="dateInputChange('${containerId}','m',this.value)"
-              oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
-            <button class="spin-btn" onclick="dateSpin('${containerId}','m',-1)">▼</button>
-          </div>
-        </div>
-        <div class="date-field year">
-          <label>Vuosi</label>
-          <div class="date-spinner">
-            <button class="spin-btn" onclick="dateSpin('${containerId}','y',1)">▲</button>
-            <input class="spin-input" type="text" inputmode="numeric" maxlength="4"
-              placeholder="vvvv" value="${yVal}"
-              onchange="dateInputChange('${containerId}','y',this.value)"
-              oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
-            <button class="spin-btn" onclick="dateSpin('${containerId}','y',-1)">▼</button>
-          </div>
-        </div>
-        <div class="date-reset-wrap">
-          <label>Poista tiedot</label>
-          <button class="date-reset" onclick="dateReset('${containerId}')" title="Tyhjennä">✕</button>
-        </div>
-      </div>`;
-  }
-
-  function spin(field, dir) {
-    if (field === 'd') {
-      const maxD = (state.m && state.y) ? daysInMonth(state.m, state.y) : 31;
-      if (state.d === null) state.d = dir > 0 ? 1 : maxD;
-      else { state.d += dir; if (state.d < 1) state.d = maxD; if (state.d > maxD) state.d = 1; }
-    } else if (field === 'm') {
-      if (state.m === null) state.m = dir > 0 ? 1 : 12;
-      else { state.m += dir; if (state.m < 1) state.m = 12; if (state.m > 12) state.m = 1; }
-      clampDay();
-    } else if (field === 'y') {
-      if (state.y === null) state.y = dir > 0 ? MIN_YEAR : MAX_YEAR;
-      else { state.y += dir; if (state.y < MIN_YEAR) state.y = MAX_YEAR; if (state.y > MAX_YEAR) state.y = MIN_YEAR; }
-      clampDay();
-    }
-    render();
-    notify();
-  }
-
-  function inputChange(field, raw) {
-    const n = parseInt(raw, 10);
-    if (isNaN(n)) return;
-    if (field === 'd') {
-      if (n >= 1 && n <= 31) { state.d = n; clampDay(); }
-    } else if (field === 'm') {
-      if (n >= 1 && n <= 12) { state.m = n; clampDay(); }
-    } else if (field === 'y') {
-      if (n >= MIN_YEAR && n <= MAX_YEAR) state.y = n;
-    }
-    notify();
-  }
-
-  function reset() {
-    state.d = null; state.m = null; state.y = null;
-    render();
-    notify();
-  }
-
-  render();
-  return { spin, reset, getDateStr, inputChange };
-}
-
-// Registry
-const DATE_PICKERS = {};
-
-function dateSpin(id, field, dir) {
-  if (DATE_PICKERS[id]) DATE_PICKERS[id].spin(field, dir);
-}
-function dateReset(id) {
-  if (DATE_PICKERS[id]) DATE_PICKERS[id].reset();
-}
-function dateInputChange(id, field, val) {
-  if (DATE_PICKERS[id]) DATE_PICKERS[id].inputChange(field, val);
-}
-
-// Alustus
-window.addEventListener('DOMContentLoaded', () => {
-  DATE_PICKERS['bdayDatePicker'] = createDatePicker('bdayDatePicker', (dateStr) => {
-    if (dateStr) {
-      const idx = getSignFromDate(dateStr);
-      const el = document.getElementById('detectedSign');
-      if (idx !== null) { el.style.display='block'; el.textContent=`${SIGNS[idx].glyph} ${SIGNS[idx].fi} · ${SIGNS[idx].el} · ${SIGNS[idx].planet}`; }
-      else el.style.display='none';
-    } else {
-      clearDetectedSign();
-    }
-  });
-
-  DATE_PICKERS['p1datePicker'] = createDatePicker('p1datePicker', (dateStr) => {
-    if (dateStr) {
-      const idx = getSignFromDate(dateStr);
-      if (idx !== null) {
-        document.getElementById('p1sign').value = idx;
-        const el = document.getElementById('p1detected');
-        el.style.display='block';
-        el.textContent=`${SIGNS[idx].glyph} ${SIGNS[idx].fi} · ${SIGNS[idx].el} · ${SIGNS[idx].planet}`;
-      }
-    } else { clearDetected(1); }
-  });
-
-  DATE_PICKERS['p2datePicker'] = createDatePicker('p2datePicker', (dateStr) => {
-    if (dateStr) {
-      const idx = getSignFromDate(dateStr);
-      if (idx !== null) {
-        document.getElementById('p2sign').value = idx;
-        const el = document.getElementById('p2detected');
-        el.style.display='block';
-        el.textContent=`${SIGNS[idx].glyph} ${SIGNS[idx].fi} · ${SIGNS[idx].el} · ${SIGNS[idx].planet}`;
-      }
-    } else { clearDetected(2); }
-  });
-});
-
-// Päivitä showBdayBase ja detectSign käyttämään pickeriä
-
-function clearIfFilled(input, callback) {
-  if (input.value) {
-    input.value = '';
-    if (callback) callback();
-  }
-}
-
-function clearDetectedSign() {
-  const el = document.getElementById('detectedSign');
-  el.style.display = 'none';
-  el.textContent = '';
-}
-
-function clearDetected(num) {
-  const el = document.getElementById(`p${num}detected`);
-  el.style.display = 'none';
-  el.textContent = '';
-  document.getElementById(`p${num}sign`).value = '';
-}
-
-
-function detectSign() {
-  // Hoidetaan pickerin callback:ssa
-}
-
-function detectSign2(num) {
-  // Hoidetaan pickerin callback:ssa
-}
-
-function switchTab(name) {
-  ['merkit','syntyma','compat'].forEach((n,i) => {
-    document.querySelectorAll('.tab')[i].classList.toggle('active', n===name);
-    document.getElementById('panel-'+n).classList.toggle('active', n===name);
+function switchTab(name){
+  var tabs=document.querySelectorAll('.tab');
+  var names=['merkit','syntyma','compat'];
+  names.forEach(function(n,i){
+    tabs[i].classList.toggle('active',n===name);
+    document.getElementById('panel-'+n).classList.toggle('active',n===name);
   });
 }
 
-function kwHtml(list, cls) {
-  return list.map(k => `<span class="kw ${cls}">${k}</span>`).join('');
+function kwHtml(list,cls){
+  return list.map(function(k){return '<span class="kw '+cls+'">'+k+'</span>';}).join('');
 }
 
-function signCardHtml(s, idx) {
-  return `
-    <div class="result-header">
-      <span class="result-glyph">${s.glyph}</span>
-      <div>
-        <div class="result-name">${s.fi}</div>
-        <div class="result-tagline">${s.tagline}</div>
-        <div class="result-dates">${DATES[idx]} &nbsp;·&nbsp; ${s.el} &nbsp;·&nbsp; ${s.planet}</div>
-      </div>
-    </div>
-
-    <p class="section-label">Luonnehoroskooppi</p>
-    <div class="desc-block">${s.kuvaus}</div>
-
-    <div class="two-col">
-      <div class="trait-box">
-        <h4>✦ VAHVUUDET</h4>
-        <div class="keywords">${kwHtml(s.vahvuudet, 'kw-str')}</div>
-      </div>
-      <div class="trait-box">
-        <h4>⚡ HAASTEET</h4>
-        <div class="keywords">${kwHtml(s.heikkoudet, 'kw-wk')}</div>
-      </div>
-    </div>
-
-    <div class="love-box">
-      <h4>♥ RAKKAUS &amp; SUHTEET</h4>
-      <p>${s.rakkaus}</p>
-    </div>
-    ${API_KEY ? `<p class="section-label">Mystinen tulkinta</p><p class="loading" id="aiExtra">✦ Ladataan...</p>` : ''}
-  `;
+function signCardHtml(s,idx){
+  return '<div class="result-header"><span class="result-glyph">'+s.glyph+'</span><div>'+
+    '<div class="result-name">'+s.fi+'</div>'+
+    '<div class="result-tagline">'+s.tagline+'</div>'+
+    '<div class="result-dates">'+DATES[idx]+' &nbsp;·&nbsp; '+s.el+' &nbsp;·&nbsp; '+s.planet+'</div>'+
+    '</div></div>'+
+    '<p class="section-label">Luonnehoroskooppi</p>'+
+    '<div class="desc-block">'+s.kuvaus+'</div>'+
+    '<div class="two-col">'+
+    '<div class="trait-box"><h4>✦ VAHVUUDET</h4><div class="keywords">'+kwHtml(s.vahvuudet,'kw-str')+'</div></div>'+
+    '<div class="trait-box"><h4>⚡ HAASTEET</h4><div class="keywords">'+kwHtml(s.heikkoudet,'kw-wk')+'</div></div>'+
+    '</div>'+
+    '<div class="love-box"><h4>♥ RAKKAUS &amp; SUHTEET</h4><p>'+s.rakkaus+'</p></div>';
 }
 
-// Build grid
-const grid = document.getElementById('signsGrid');
-let currentSignBtn = null;
-SIGNS.forEach((s,i) => {
-  const btn = document.createElement('button');
-  btn.className = 'sign-btn';
-  btn.innerHTML = `<span class="glyph">${s.glyph}</span><span>${s.fi}</span><span class="elname">${s.el}</span>`;
-  btn.onclick = () => {
-    if (currentSignBtn) currentSignBtn.classList.remove('selected');
-    btn.classList.add('selected');
-    currentSignBtn = btn;
-    document.getElementById('signResult').innerHTML = signCardHtml(s, i);
-    if (API_KEY) loadSignAI(i);
+var EL_COMPAT={
+  'Tuli':{'Tuli':[88,85,75],'Ilma':[82,88,80],'Maa':[52,60,65],'Vesi':[48,55,50]},
+  'Ilma':{'Tuli':[82,88,80],'Ilma':[78,90,82],'Maa':[55,62,70],'Vesi':[50,58,55]},
+  'Maa':{'Tuli':[52,60,65],'Ilma':[55,62,70],'Maa':[85,80,88],'Vesi':[80,78,85]},
+  'Vesi':{'Tuli':[48,55,50],'Ilma':[50,58,55],'Maa':[80,78,85],'Vesi':[85,82,75]},
+};
+var PAIR_TWEAK={'0-4':[8,5,3],'0-8':[5,8,5],'1-5':[7,5,8],'1-9':[6,6,7],'2-6':[7,8,5],'2-10':[5,7,6],'3-7':[8,6,4],'3-11':[7,7,5],'7-11':[6,6,4],'5-9':[5,6,8],'6-10':[6,7,5],'4-8':[5,7,6],'0-6':[3,5,-2],'1-7':[4,3,-3],'2-8':[3,6,-1],'3-9':[2,4,-2],'4-10':[2,3,-3],'5-11':[3,4,-1]};
+
+function clamp(v){return Math.max(30,Math.min(98,Math.round(v)));}
+function calcScores(i1,i2){
+  var s1=SIGNS[i1],s2=SIGNS[i2];
+  var base=EL_COMPAT[s1.el][s2.el];
+  var r=base[0],y=base[1],t=base[2];
+  var key=Math.min(i1,i2)+'-'+Math.max(i1,i2);
+  var tw=PAIR_TWEAK[key];
+  if(tw){r+=tw[0];y+=tw[1];t+=tw[2];}
+  if(i1===i2){r=78;y=92;t=80;}
+  return{rakkaus:clamp(r),ystavyys:clamp(y),tyo:clamp(t)};
+}
+
+function sharedTraits(s1,s2){
+  return{
+    shared:s1.vahvuudet.filter(function(v){return s2.vahvuudet.indexOf(v)>=0;}),
+    clash:s1.heikkoudet.filter(function(h){return s2.heikkoudet.indexOf(h)>=0;})
   };
-  grid.appendChild(btn);
-});
+}
 
-['p1sign','p2sign'].forEach(id => {
-  const sel = document.getElementById(id);
-  SIGNS.forEach((s,i) => {
-    const o = document.createElement('option'); o.value=i; o.textContent=`${s.glyph} ${s.fi}`; sel.appendChild(o);
+var EL_DESC={
+  'Tuli-Tuli':'Kaksi tulista persoonaa yhdessä synnyttää energiaa ja intoa — mutta myös kilpailua. Kumpikaan ei helposti myönnä olevansa väärässä.',
+  'Ilma-Ilma':'Kaksi ilmamerkkiä löytää toisistaan ajattelukumppanin. Keskustelua riittää, ja yhteiset ideat kukkivat. Arjen konkretia voi jäädä molemmilta vähemmälle.',
+  'Maa-Maa':'Maaelementtien välillä vallitsee luontainen ymmärrys: molemmat arvostavat vakautta, käytännöllisyyttä ja pitkäjänteisyyttä. Muutos on molemmille hidasta.',
+  'Vesi-Vesi':'Vesimerkit jakavat syvän tunneviisauden — tunteet virtaavat avoimesti ja toisen aistiminen on helppoa. Vaara on, että tunteet vyöryvät yli reunojen.',
+  'Tuli-Ilma':'Tuli ja ilma ruokkivat toisiaan: ilma antaa tulelle tilaa palaa, tuli lämmittää ilmaa. Yhdessä syntyy inspiraatiota ja liikettä.',
+  'Ilma-Tuli':'Tuli ja ilma ruokkivat toisiaan: ilma antaa tulelle tilaa palaa, tuli lämmittää ilmaa. Yhdessä syntyy inspiraatiota ja liikettä.',
+  'Maa-Vesi':'Maa ja vesi täydentävät toisiaan kauniisti — vesi tuo tunteen ja intuitiivisen syvyyden, maa antaa rakenteen ja turvan.',
+  'Vesi-Maa':'Maa ja vesi täydentävät toisiaan kauniisti — vesi tuo tunteen ja intuitiivisen syvyyden, maa antaa rakenteen ja turvan.',
+  'Tuli-Maa':'Tuli haluaa liikehtia, maa pysyä paikoillaan. Kumpikaan ei luonnostaan anna periksi. Parhaimmillaan maa ankkuroi tulen ideat todeksi.',
+  'Maa-Tuli':'Tuli haluaa liikehtia, maa pysyä paikoillaan. Kumpikaan ei luonnostaan anna periksi. Parhaimmillaan maa ankkuroi tulen ideat todeksi.',
+  'Tuli-Vesi':'Tuli ja vesi ovat luonteeltaan vastakkaisia — yksi syttyy, toinen sammuttaa. Jännite on todellinen, mutta juuri se voi tehdä suhteesta intensiivisen.',
+  'Vesi-Tuli':'Tuli ja vesi ovat luonteeltaan vastakkaisia — yksi syttyy, toinen sammuttaa. Jännite on todellinen, mutta juuri se voi tehdä suhteesta intensiivisen.',
+  'Ilma-Maa':'Ilma kaipaa vapautta ja uutta, maa rakastaa tuttua ja vakaata. Erimielisyyttä syntyy helposti tahdista, mutta erot voivat myös täydentää toisiaan.',
+  'Maa-Ilma':'Ilma kaipaa vapautta ja uutta, maa rakastaa tuttua ja vakaata. Erimielisyyttä syntyy helposti tahdista, mutta erot voivat myös täydentää toisiaan.',
+  'Ilma-Vesi':'Ilma lähestyy maailmaa ajattelun kautta, vesi tunteiden. Suhteessa voidaan oppia paljon toiselta — jos erilaisuutta osataan arvostaa.',
+  'Vesi-Ilma':'Ilma lähestyy maailmaa ajattelun kautta, vesi tunteiden. Suhteessa voidaan oppia paljon toiselta — jos erilaisuutta osataan arvostaa.'
+};
+
+var PARTITIVE={'Rohkeus':'rohkeutta','Itsevarmuus':'itsevarmuutta','Aloitekyky':'aloitekykyä','Intohimoisuus':'intohimoisuutta','Rehellisyys':'rehellisyyttä','Sitkeys':'sitkeyttä','Kärsivällisyys':'kärsivällisyyttä','Lojaalius':'lojaaliutta','Sydämellisyys':'sydämellisyyttä','Aikaansaavuus':'aikaansaavuutta','Vilkkaus':'vilkkautta','Sopeutuvuus':'sopeutuvuutta','Uteliaisuus':'uteliaisuutta','Sosiaalisuus':'sosiaalisuutta','Nopea-älyisyys':'nopea-älyisyyttä','Empaattisuus':'empaattisuutta','Intuitio':'intuitiota','Myötätunto':'myötätuntoa','Suojeluvaisto':'suojeluvaistoaan','Anteliaisuus':'anteliaisuutta','Luovuus':'luovuutta','Johtajuus':'johtajuutta','Kunnianhimoisuus':'kunnianhimoa','Elinvoimaisuus':'elinvoimaisuutta','Tarkkuus':'tarkkuutta','Älykkyys':'älykkyyttä','Analyyttisyys':'analyyttisyyttä','Järjestelmällisyys':'järjestelmällisyyttä','Huolellisuus':'huolellisuutta','Kiltteys':'kiltteyttä','Diplomaattisuus':'diplomaattisuutta','Hurmaavuus':'hurmaavuutta','Tasapainoisuus':'tasapainoisuutta','Oikeudenmukaisuus':'oikeudenmukaisuutta','Syvällisyys':'syvällisyyttä','Intensiivisyys':'intensiivisyyttä','Mystisyys':'mystiikkaa','Päättäväisyys':'päättäväisyyttä','Optimismi':'optimismia','Seikkailullisuus':'seikkailullisuutta','Filosofisuus':'filosofisuutta','Avoimuus':'avoimuutta','Kurinalaisuus':'kurinalaisuutta','Käytännöllisyys':'käytännöllisyyttä','Tavoitteellisuus':'tavoitteellisuutta','Vastuullisuus':'vastuullisuutta','Huumorintaju':'huumorintajua','Oivaltavuus':'oivaltavuutta','Itsenäisyys':'itsenäisyyttä','Idealismi':'idealismia','Tunneäly':'tunneälyä','Resilienssi':'resilienssiä'};
+
+function toPartitive(w){return PARTITIVE[w]||w.toLowerCase()+'a';}
+
+function buildCompatText(i1,i2){
+  var s1=SIGNS[i1],s2=SIGNS[i2];
+  if(i1===i2){
+    return 'Kaksi '+s1.fi.toLowerCase()+'ta yhdessä — yhteistä on paljon, ehkä liikaakin. '+s1.kuvaus+' Molemmat tunnistavat toisessaan omat vahvuutensa ja heikkoutensa kuin peilistä. Rakkaudessa yhteinen sävel löytyy nopeasti: '+s1.rakkaus.toLowerCase()+' Ystävyys kukoistaa jaetun maailmankuvan varassa.';
+  }
+  var elKey=s1.el+'-'+s2.el;
+  var elDesc=EL_DESC[elKey]||'';
+  var tr=sharedTraits(s1,s2);
+  var yhteista=tr.shared.length>0?' Yhteistä maaperää löytyy: molemmat arvostavat '+tr.shared.slice(0,2).map(toPartitive).join(' ja ')+'.':'';
+  var kitka=tr.clash.length>0?' Hankausta voi syntyä, kun molempien '+toPartitive(tr.clash[0])+' törmää toisiinsa.':'';
+  var scores=calcScores(i1,i2);
+  var loveLine=scores.rakkaus>=80?'Rakkaudessa yhteys on vahva.':scores.rakkaus>=60?'Rakkaus vaatii molemminpuolista joustoa.':'Rakkauden polku ei ole suoraviivaisin.';
+  var workLine=scores.tyo>=80?'Töissä nämä kaksi täydentävät toisiaan luontevasti.':scores.tyo>=65?'Yhteistyö onnistuu, kun roolit ovat selkeät.':'Yhteistyössä kannattaa sopia pelisäännöistä etukäteen.';
+  var s1v=s1.vahvuudet.slice(0,2).map(toPartitive).join(' ja ');
+  var s2v=s2.vahvuudet.slice(0,2).map(toPartitive).join(' ja ');
+  return elDesc+yhteista+kitka+' '+s1.fi+' tuo suhteeseen '+s1v+', '+s2.fi.toLowerCase()+' puolestaan '+s2v+'. '+loveLine+' '+workLine;
+}
+
+function showBestMatchOverlay(emoji,teksti){
+  var overlay=document.createElement('div');
+  overlay.className='best-match-overlay';
+  overlay.innerHTML='<div class="best-match-card"><span class="card-emoji">'+emoji+'</span><div class="card-text">'+teksti+'</div><div class="card-stars">✦ ✦ ✦</div></div>';
+  document.body.appendChild(overlay);
+  setTimeout(function(){overlay.classList.add('hide');setTimeout(function(){overlay.remove();},500);},3000);
+  overlay.addEventListener('click',function(){overlay.classList.add('hide');setTimeout(function(){overlay.remove();},500);});
+}
+
+function analyzeCompat(){
+  var i1=parseInt(document.getElementById('p1sign').value);
+  var i2=parseInt(document.getElementById('p2sign').value);
+  var box=document.getElementById('compatResult');
+  if(isNaN(i1)||isNaN(i2)){box.innerHTML='<p class="error-text">Valitse tai anna molempien syntymätiedot.</p>';return;}
+  var s1=SIGNS[i1],s2=SIGNS[i2];
+  var scores=calcScores(i1,i2);
+  var teksti=buildCompatText(i1,i2);
+  var maxScore=Math.max(scores.rakkaus,scores.ystavyys,scores.tyo);
+  var oEmoji,oTeksti;
+  if(scores.rakkaus===maxScore){oEmoji='💕';oTeksti='RAKASTAVAISINA OLETTE YHDESSÄ PARHAIMMILLANNE';}
+  else if(scores.ystavyys===maxScore){oEmoji='🤝';oTeksti='TULETTE PARHAITEN TOIMEEN YSTÄVINÄ';}
+  else{oEmoji='💼';oTeksti='TYÖKAVEREINA SUHTEENNE TOIMII PARHAITEN';}
+  showBestMatchOverlay(oEmoji,oTeksti);
+  var bestHtml='<div class="best-match-box"><span class="banner-emoji">'+oEmoji+'</span> '+oTeksti+' <span class="banner-emoji">'+oEmoji+'</span></div>';
+  box.innerHTML='<div class="compat-header">'+
+    '<div class="compat-sign"><div class="glyph">'+s1.glyph+'</div><div class="name">'+s1.fi+'</div></div>'+
+    '<div class="compat-heart">♥</div>'+
+    '<div class="compat-sign"><div class="glyph">'+s2.glyph+'</div><div class="name">'+s2.fi+'</div></div>'+
+    '</div>'+bestHtml+
+    '<div class="score-bar"><span class="score-label"><span class="score-emoji">💏</span> Rakkaus</span><div class="bar-track"><div class="bar-fill" data-val="'+scores.rakkaus+'"></div></div><span class="score-num">'+scores.rakkaus+'%</span></div>'+
+    '<div class="score-bar"><span class="score-label"><span class="score-emoji">👯</span> Ystävyys</span><div class="bar-track"><div class="bar-fill" data-val="'+scores.ystavyys+'"></div></div><span class="score-num">'+scores.ystavyys+'%</span></div>'+
+    '<div class="score-bar"><span class="score-label"><span class="score-emoji">👩‍🏫</span> Työ</span><div class="bar-track"><div class="bar-fill" data-val="'+scores.tyo+'"></div></div><span class="score-num">'+scores.tyo+'%</span></div>'+
+    '<div class="divider"></div><p class="section-label">Yhteensopivuus</p>'+
+    '<div class="ai-text">'+teksti+'</div>'+
+    '<div class="divider"></div><div class="two-col">'+
+    '<div class="trait-box"><h4>'+s1.glyph+' '+s1.fi.toUpperCase()+' tuo</h4><div class="keywords">'+kwHtml(s1.vahvuudet,'kw-str')+'</div></div>'+
+    '<div class="trait-box"><h4>'+s2.glyph+' '+s2.fi.toUpperCase()+' tuo</h4><div class="keywords">'+kwHtml(s2.vahvuudet,'kw-str')+'</div></div>'+
+    '</div>';
+  setTimeout(function(){document.querySelectorAll('.bar-fill').forEach(function(el){el.style.width=el.dataset.val+'%';});},100);
+}
+
+function showBdayBase(){
+  var box=document.getElementById('bdayResult');
+  var dateVal=DATE_PICKERS['bdayDatePicker']?DATE_PICKERS['bdayDatePicker'].getDateStr():null;
+  if(!dateVal){box.innerHTML='<p class="error-text">Anna ensin syntymäpäiväsi.</p>';return;}
+  var idx=getSignFromDate(dateVal);
+  if(idx===null){box.innerHTML='<p class="error-text">Merkin tunnistaminen epäonnistui.</p>';return;}
+  var s=SIGNS[idx];
+  var dateStr=new Date(dateVal).toLocaleDateString('fi-FI');
+  box.innerHTML='<div class="result-header"><span class="result-glyph">'+s.glyph+'</span>'+
+    '<div><div class="result-name">'+s.fi+' · '+dateStr+'</div>'+
+    '<div class="result-tagline">'+s.tagline+'</div>'+
+    '<div class="result-dates">'+s.el+' · '+s.planet+'</div></div></div>'+
+    '<p class="section-label">Luonnehoroskooppi</p>'+
+    '<div class="desc-block">'+s.kuvaus+'</div>'+
+    '<div class="two-col">'+
+    '<div class="trait-box"><h4>✦ VAHVUUDET</h4><div class="keywords">'+kwHtml(s.vahvuudet,'kw-str')+'</div></div>'+
+    '<div class="trait-box"><h4>⚡ HAASTEET</h4><div class="keywords">'+kwHtml(s.heikkoudet,'kw-wk')+'</div></div>'+
+    '</div>'+
+    '<div class="love-box"><h4>♥ RAKKAUS &amp; SUHTEET</h4><p>'+s.rakkaus+'</p></div>';
+}
+
+window.addEventListener('DOMContentLoaded',function(){
+  // Tähdet
+  var starsEl=document.getElementById('stars');
+  for(var i=0;i<120;i++){
+    var s=document.createElement('div');s.className='star';
+    var sz=Math.random()*2+1;
+    s.style.cssText='width:'+sz+'px;height:'+sz+'px;top:'+Math.random()*100+'%;left:'+Math.random()*100+'%;--d:'+(2+Math.random()*5)+'s;--delay:'+(-Math.random()*6)+'s;--op:'+(0.2+Math.random()*0.8);
+    starsEl.appendChild(s);
+  }
+
+  // Merkkiruudukko
+  var grid=document.getElementById('signsGrid');
+  var currentSignBtn=null;
+  SIGNS.forEach(function(s,i){
+    var btn=document.createElement('button');
+    btn.className='sign-btn';
+    btn.innerHTML='<span class="glyph">'+s.glyph+'</span><span>'+s.fi+'</span><span class="elname">'+s.el+'</span>';
+    btn.onclick=function(){
+      if(currentSignBtn)currentSignBtn.classList.remove('selected');
+      btn.classList.add('selected');currentSignBtn=btn;
+      document.getElementById('signResult').innerHTML=signCardHtml(s,i);
+    };
+    grid.appendChild(btn);
+  });
+
+  // Merkkivalikot
+  ['p1sign','p2sign'].forEach(function(id){
+    var sel=document.getElementById(id);
+    SIGNS.forEach(function(s,i){
+      var o=document.createElement('option');o.value=i;o.textContent=s.glyph+' '+s.fi;sel.appendChild(o);
+    });
+  });
+
+  // Päivämäärävalitsimet
+  DATE_PICKERS['bdayDatePicker']=createDatePicker('bdayDatePicker',function(dateStr){
+    var el=document.getElementById('detectedSign');
+    if(dateStr){var idx=getSignFromDate(dateStr);if(idx!==null){el.style.display='block';el.textContent=SIGNS[idx].glyph+' '+SIGNS[idx].fi+' · '+SIGNS[idx].el+' · '+SIGNS[idx].planet;}else el.style.display='none';}
+    else{el.style.display='none';el.textContent='';}
+  });
+  DATE_PICKERS['p1datePicker']=createDatePicker('p1datePicker',function(dateStr){
+    var el=document.getElementById('p1detected');
+    if(dateStr){var idx=getSignFromDate(dateStr);if(idx!==null){document.getElementById('p1sign').value=idx;el.style.display='block';el.textContent=SIGNS[idx].glyph+' '+SIGNS[idx].fi+' · '+SIGNS[idx].el+' · '+SIGNS[idx].planet;}}
+    else{el.style.display='none';el.textContent='';document.getElementById('p1sign').value='';}
+  });
+  DATE_PICKERS['p2datePicker']=createDatePicker('p2datePicker',function(dateStr){
+    var el=document.getElementById('p2detected');
+    if(dateStr){var idx=getSignFromDate(dateStr);if(idx!==null){document.getElementById('p2sign').value=idx;el.style.display='block';el.textContent=SIGNS[idx].glyph+' '+SIGNS[idx].fi+' · '+SIGNS[idx].el+' · '+SIGNS[idx].planet;}}
+    else{el.style.display='none';el.textContent='';document.getElementById('p2sign').value='';}
   });
 });
-
-async function claudeAPI(prompt) {
-  if (!API_KEY) throw new Error('API-avain puuttuu.');
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-api-key": API_KEY, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, messages: [{ role: "user", content: prompt }] })
-  });
-  if (!resp.ok) { const e = await resp.json().catch(()=>({})); throw new Error(e?.error?.message || `HTTP ${resp.status}`); }
-  const data = await resp.json();
-  return data.content.map(c => c.text||'').join('');
-}
-
-async function loadSignAI(idx) {
-  const s = SIGNS[idx];
-  try {
-    const text = await claudeAPI(
-      `Olet mystinen astrologi. Tässä on kuvaus merkistä ${s.fi}: "${s.kuvaus}"
-
-Kirjoita noin 80–100 sanaa runollinen, mystinen syventävä näkökulma suomeksi. Älä toista samoja asioita — tuo esiin merkin kosminen olemus ja henkinen ulottuvuus. Vain virtaava teksti, ei otsikoita.`
-    );
-    const el = document.getElementById('aiExtra');
-    if (el) el.outerHTML = `<div class="ai-text">${text}</div>`;
-  } catch(e) {
-    const el = document.getElementById('aiExtra');
-    if (el) el.outerHTML = `<p class="error-small">AI ei saatavilla: ${e.message}</p>`;
-  }
-}
-
-function showBdayBase() {
-  const dateVal = DATE_PICKERS['bdayDatePicker'] ? DATE_PICKERS['bdayDatePicker'].getDateStr() : null;
-  const box = document.getElementById('bdayResult');
-  if (!dateVal) { box.innerHTML=`<p class="error-text">Anna ensin syntymäpäiväsi.</p>`; return; }
-  const idx = getSignFromDate(dateVal);
-  if (idx===null) { box.innerHTML=`<p class="error-text">Merkin tunnistaminen epäonnistui.</p>`; return; }
-  const s = SIGNS[idx];
-  const dateStr = new Date(dateVal).toLocaleDateString('fi-FI');
-  box.innerHTML = `
-    <div class="result-header">
-      <span class="result-glyph">${s.glyph}</span>
-      <div><div class="result-name">${s.fi} · ${dateStr}</div><div class="result-tagline">${s.tagline}</div><div class="result-dates">${s.el} · ${s.planet}</div></div>
-    </div>
-    <p class="section-label">Luonnehoroskooppi</p>
-    <div class="desc-block">${s.kuvaus}</div>
-    <div class="two-col">
-      <div class="trait-box"><h4>✦ VAHVUUDET</h4><div class="keywords">${kwHtml(s.vahvuudet,'kw-str')}</div></div>
-      <div class="trait-box"><h4>⚡ HAASTEET</h4><div class="keywords">${kwHtml(s.heikkoudet,'kw-wk')}</div></div>
-    </div>
-    <div class="love-box"><h4>♥ RAKKAUS &amp; SUHTEET</h4><p>${s.rakkaus}</p></div>`;
-}
-
-async function analyzeFromBday() {
-  const dateVal = DATE_PICKERS['bdayDatePicker'] ? DATE_PICKERS['bdayDatePicker'].getDateStr() : null;
-  const timeVal = document.getElementById('bdayTime').value;
-  const box = document.getElementById('bdayResult');
-  if (!dateVal) { box.innerHTML=`<p class="error-text">Anna ensin syntymäpäiväsi.</p>`; return; }
-  const idx = getSignFromDate(dateVal);
-  if (idx===null) { box.innerHTML=`<p class="error-text">Merkin tunnistaminen epäonnistui.</p>`; return; }
-  const s = SIGNS[idx];
-  const dateStr = new Date(dateVal).toLocaleDateString('fi-FI');
-  const timeStr = timeVal ? ` klo ${timeVal}` : '';
-  box.innerHTML=`<p class="loading">✦ Tähtikarttoasi tulkitaan...</p>`;
-  try {
-    const text = await claudeAPI(
-      `Olet mystinen astrologi. Tässä on kuvaus merkistä ${s.fi}: "${s.kuvaus}" Rakkaus: "${s.rakkaus}"
-
-Henkilö on syntynyt ${dateStr}${timeStr}. Kirjoita henkilökohtainen, runollinen horoskoopianalyysi (noin 150 sanaa) suomeksi. Mainitse syntymäpäivä luontevasti. Syventä kuvausta — tuo esiin elämänpolku, vahvuudet, haasteet ja kosminen merkitys. Lämmin mystinen tyyli, ei otsikoita.`
-    );
-    box.innerHTML = `
-      <div class="result-header">
-        <span class="result-glyph">${s.glyph}</span>
-        <div><div class="result-name">${s.fi} · ${dateStr}</div><div class="result-tagline">${s.tagline}</div><div class="result-dates">${s.el} · ${s.planet}</div></div>
-      </div>
-      <p class="section-label">Luonnehoroskooppi</p>
-      <div class="desc-block">${s.kuvaus}</div>
-      <div class="two-col">
-        <div class="trait-box"><h4>✦ VAHVUUDET</h4><div class="keywords">${kwHtml(s.vahvuudet,'kw-str')}</div></div>
-        <div class="trait-box"><h4>⚡ HAASTEET</h4><div class="keywords">${kwHtml(s.heikkoudet,'kw-wk')}</div></div>
-      </div>
-      <div class="love-box"><h4>♥ RAKKAUS &amp; SUHTEET</h4><p>${s.rakkaus}</p></div>
-      <div class="divider"></div>
-      <p class="section-label">Henkilökohtainen analyysi</p>
-      <div class="ai-text">${text}</div>`;
-  } catch(e) {
-    box.innerHTML=`<p class="error-text">AI-analyysi epäonnistui.</p><p class="error-small">${e.message}</p>`;
-  }
-}
-
-// ── Yhteensopivuuslogiikka ──────────────────────────────────────────────
-// Elementtien yhteensopivuus
-const EL_COMPAT = {
-  'Tuli':  { 'Tuli': [88,85,75], 'Ilma': [82,88,80], 'Maa': [52,60,65], 'Vesi': [48,55,50] },
-  'Ilma':  { 'Tuli': [82,88,80], 'Ilma': [78,90,82], 'Maa': [55,62,70], 'Vesi': [50,58,55] },
-  'Maa':   { 'Tuli': [52,60,65], 'Ilma': [55,62,70], 'Maa': [85,80,88], 'Vesi': [80,78,85] },
-  'Vesi':  { 'Tuli': [48,55,50], 'Ilma': [50,58,55], 'Maa': [80,78,85], 'Vesi': [85,82,75] },
-};
-
-// Merkkiparien erityiset säädöt [rakkaus, ystävyys, työ]
-const PAIR_TWEAK = {
-  '0-4':[+8,+5,+3],  // Oinas–Leijona (tuli+tuli johtajat)
-  '0-8':[+5,+8,+5],  // Oinas–Jousimies
-  '1-5':[+7,+5,+8],  // Härkä–Neitsyt (maa+maa)
-  '1-9':[+6,+6,+7],  // Härkä–Kauris
-  '2-6':[+7,+8,+5],  // Kaksoset–Vaaka (ilma+ilma)
-  '2-10':[+5,+7,+6], // Kaksoset–Vesimies
-  '3-7':[+8,+6,+4],  // Rapu–Skorpioni (vesi+vesi)
-  '3-11':[+7,+7,+5], // Rapu–Kalat
-  '7-11':[+6,+6,+4], // Skorpioni–Kalat
-  '5-9':[+5,+6,+8],  // Neitsyt–Kauris
-  '6-10':[+6,+7,+5], // Vaaka–Vesimies
-  '4-8':[+5,+7,+6],  // Leijona–Jousimies
-  '0-6':[+3,+5,-2],  // Oinas–Vaaka (vastakohdat)
-  '1-7':[+4,+3,-3],  // Härkä–Skorpioni
-  '2-8':[+3,+6,-1],  // Kaksoset–Jousimies
-  '3-9':[+2,+4,-2],  // Rapu–Kauris
-  '4-10':[+2,+3,-3], // Leijona–Vesimies
-  '5-11':[+3,+4,-1], // Neitsyt–Kalat
-};
-
-function getPairKey(i1, i2) {
-  const a = Math.min(i1,i2), b = Math.max(i1,i2);
-  return `${a}-${b}`;
-}
-
-function clamp(v) { return Math.max(30, Math.min(98, Math.round(v))); }
-
-function calcScores(i1, i2) {
-  const s1 = SIGNS[i1], s2 = SIGNS[i2];
-  const base = EL_COMPAT[s1.el][s2.el];
-  let [r, y, t] = [base[0], base[1], base[2]];
-  const tweak = PAIR_TWEAK[getPairKey(i1,i2)];
-  if (tweak) { r+=tweak[0]; y+=tweak[1]; t+=tweak[2]; }
-  // sama merkki itsensä kanssa
-  if (i1===i2) { r=78; y=92; t=80; }
-  return { rakkaus: clamp(r), ystavyys: clamp(y), tyo: clamp(t) };
-}
-
-// Löytää yhteiset vahvuudet ja törmäykset
-function sharedTraits(s1, s2) {
-  const shared = s1.vahvuudet.filter(v => s2.vahvuudet.includes(v));
-  const clash  = s1.heikkoudet.filter(h => s2.heikkoudet.includes(h));
-  return { shared, clash };
-}
-
-// Elementtiparien luonnekuvaukset
-const EL_DESC = {
-  'Tuli-Tuli':   'Kaksi tulista persoonaa yhdessä synnyttää energiaa ja intoa — mutta myös kilpailua. Kumpikaan ei helposti myönnä olevansa väärässä.',
-  'Ilma-Ilma':   'Kaksi ilmamerkkiä löytää toisistaan ajattelukumppanin. Keskustelua riittää, ja yhteiset ideat kukkivat. Arjen konkretia voi jäädä molemmilta vähemmälle.',
-  'Maa-Maa':     'Maaelementtien välillä vallitsee luontainen ymmärrys: molemmat arvostavat vakautta, käytännöllisyyttä ja pitkäjänteisyyttä. Muutos on molemmille hidasta.',
-  'Vesi-Vesi':   'Vesimerkit jakavat syvän tunneviisauden — tunteet virtaavat avoimesti ja toisen aistiminen on helppoa. Vaara on, että tunteet vyöryvät yli reunojen.',
-  'Tuli-Ilma':   'Tuli ja ilma ruokkivat toisiaan: ilma antaa tulelle tilaa palaa, tuli lämmittää ilmaa. Yhdessä syntyy inspiraatiota ja liikettä.',
-  'Ilma-Tuli':   'Tuli ja ilma ruokkivat toisiaan: ilma antaa tulelle tilaa palaa, tuli lämmittää ilmaa. Yhdessä syntyy inspiraatiota ja liikettä.',
-  'Maa-Vesi':    'Maa ja vesi täydentävät toisiaan kauniisti — vesi tuo tunteen ja intuitiivisen syvyyden, maa antaa rakenteen ja turvan.',
-  'Vesi-Maa':    'Maa ja vesi täydentävät toisiaan kauniisti — vesi tuo tunteen ja intuitiivisen syvyyden, maa antaa rakenteen ja turvan.',
-  'Tuli-Maa':    'Tuli haluaa liikehtia, maa pysyä paikoillaan. Kumpikaan ei luonnostaan anna periksi. Parhaimmillaan maa ankkuroi tulen ideat todeksi.',
-  'Maa-Tuli':    'Tuli haluaa liikehtia, maa pysyä paikoillaan. Kumpikaan ei luonnostaan anna periksi. Parhaimmillaan maa ankkuroi tulen ideat todeksi.',
-  'Tuli-Vesi':   'Tuli ja vesi ovat luonteeltaan vastakkaisia — yksi syttyy, toinen sammuttaa. Jännite on todellinen, mutta juuri se voi tehdä suhteesta intensiivisen.',
-  'Vesi-Tuli':   'Tuli ja vesi ovat luonteeltaan vastakkaisia — yksi syttyy, toinen sammuttaa. Jännite on todellinen, mutta juuri se voi tehdä suhteesta intensiivisen.',
-  'Ilma-Maa':    'Ilma kaipaa vapautta ja uutta, maa rakastaa tuttua ja vakaata. Erimielisyyttä syntyy helposti tahdista, mutta erot voivat myös täydentää toisiaan.',
-  'Maa-Ilma':    'Ilma kaipaa vapautta ja uutta, maa rakastaa tuttua ja vakaata. Erimielisyyttä syntyy helposti tahdista, mutta erot voivat myös täydentää toisiaan.',
-  'Ilma-Vesi':   'Ilma lähestyy maailmaa ajattelun kautta, vesi tunteiden. Suhteessa voidaan oppia paljon toiselta — jos erilaisuutta osataan arvostaa.',
-  'Vesi-Ilma':   'Ilma lähestyy maailmaa ajattelun kautta, vesi tunteiden. Suhteessa voidaan oppia paljon toiselta — jos erilaisuutta osataan arvostaa.',
-};
-
-// Partitiivit vahvuuksille
-const PARTITIVE = {
-  'Rohkeus':'rohkeutta','Itsevarmuus':'itsevarmuutta','Aloitekyky':'aloitekykyä',
-  'Intohimoisuus':'intohimoisuutta','Rehellisyys':'rehellisyyttä',
-  'Sitkeys':'sitkeyttä','Kärsivällisyys':'kärsivällisyyttä','Lojaalius':'lojaalius',
-  'Lojaalius':'lojaaliutta','Sydämellisyys':'sydämellisyyttä','Aikaansaavuus':'aikaansaavuutta',
-  'Vilkkaus':'vilkkautta','Sopeutuvuus':'sopeutuvuutta','Uteliaisuus':'uteliaisuutta',
-  'Sosiaalisuus':'sosiaalisuutta','Nopea-älyisyys':'nopea-älyisyyttä',
-  'Empaattisuus':'empaattisuutta','Intuitio':'intuitiota','Myötätunto':'myötätuntoa',
-  'Suojeluvaisto':'suojeluvaistoaan','Hellä':'hellää lämpöä',
-  'Anteliaisuus':'anteliaisuutta','Luovuus':'luovuutta','Johtajuus':'johtajuutta',
-  'Kunnianhimoisuus':'kunnianhimoa','Elinvoimaisuus':'elinvoimaisuutta',
-  'Tarkkuus':'tarkkuutta','Älykkyys':'älykkyyttä','Analyyttisyys':'analyyttisyyttä',
-  'Järjestelmällisyys':'järjestelmällisyyttä','Huolellisuus':'huolellisuutta',
-  'Kiltteys':'kiltteyttä',
-  'Diplomaattisuus':'diplomaattisuutta','Hurmaavuus':'hurmaavuutta',
-  'Tasapainoisuus':'tasapainoisuutta','Oikeudenmukaisuus':'oikeudenmukaisuutta',
-  'Syvällisyys':'syvällisyyttä','Intensiivisyys':'intensiivisyyttä',
-  'Mystisyys':'mystiikkaa','Päättäväisyys':'päättäväisyyttä',
-  'Optimismi':'optimismia','Seikkailullisuus':'seikkailullisuutta',
-  'Filosofisuus':'filosofisuutta','Avoimuus':'avoimuutta',
-  'Kurinalaisuus':'kurinalaisuutta','Käytännöllisyys':'käytännöllisyyttä',
-  'Tavoitteellisuus':'tavoitteellisuutta','Vastuullisuus':'vastuullisuutta',
-  'Huumorintaju':'huumorintajua',
-  'Oivaltavuus':'oivaltavuutta','Itsenäisyys':'itsenäisyyttä','Idealismi':'idealismia',
-  'Tunneäly':'tunneälyä','Resilienssi':'resilienssiä',
-};
-
-function toPartitive(word) {
-  return PARTITIVE[word] || word.toLowerCase() + 'a';
-}
-
-function buildCompatText(i1, i2, scores) {
-  const s1 = SIGNS[i1], s2 = SIGNS[i2];
-  if (i1 === i2) {
-    return `Kaksi ${s1.fi.toLowerCase()}ta yhdessä — yhteistä on paljon, ehkä liikaakin. ${s1.kuvaus} Molemmat tunnistavat toisessaan omat vahvuutensa ja heikkoutensa kuin peilistä, mikä voi olla yhtä aikaa helpottavaa ja haastavaa. Rakkaudessa yhteinen sävel löytyy nopeasti: ${s1.rakkaus.toLowerCase()} Ystävyys kukoistaa jaetun maailmankuvan varassa, mutta töissä samanlainen toimintatapa voi johtaa siihen, että kumpikin odottaa toisen tekevän sen osan, joka molemmilta jää helposti tekemättä.`;
-  }
-
-  const elKey = `${s1.el}-${s2.el}`;
-  const elDesc = EL_DESC[elKey] || '';
-  const { shared, clash } = sharedTraits(s1, s2);
-
-  let yhteista = '';
-  if (shared.length > 0) {
-    yhteista = ` Yhteistä maaperää löytyy: molemmat arvostavat ${shared.slice(0,2).map(v=>toPartitive(v)).join(' ja ')}.`;
-  }
-
-  let kitka = '';
-  if (clash.length > 0) {
-    kitka = ` Hankausta voi syntyä, kun molempien ${toPartitive(clash[0])} törmää toisiinsa.`;
-  }
-
-  let loveLine = '';
-  if (scores.rakkaus >= 80) {
-    loveLine = `Rakkaudessa yhteys on vahva — ${s1.rakkaus.toLowerCase()} ${s2.rakkaus.toLowerCase()}`;
-  } else if (scores.rakkaus >= 60) {
-    loveLine = `Rakkaus vaatii molemminpuolista joustoa — ${s1.rakkaus.toLowerCase()} ${s2.rakkaus.toLowerCase()}`;
-  } else {
-    loveLine = `Rakkauden polku ei ole suoraviivaisin — ${s1.rakkaus.toLowerCase()} ${s2.rakkaus.toLowerCase()}`;
-  }
-
-  let workLine = '';
-  if (scores.tyo >= 80) {
-    workLine = `Töissä nämä kaksi täydentävät toisiaan luontevasti.`;
-  } else if (scores.tyo >= 65) {
-    workLine = `Yhteistyö onnistuu, kun roolit ovat selkeät.`;
-  } else {
-    workLine = `Yhteistyössä kannattaa sopia pelisäännöistä etukäteen.`;
-  }
-
-  const s1vahv = s1.vahvuudet.slice(0,2).map(v=>toPartitive(v)).join(' ja ');
-  const s2vahv = s2.vahvuudet.slice(0,2).map(v=>toPartitive(v)).join(' ja ');
-
-  return `${elDesc}${yhteista}${kitka} ${s1.fi} tuo suhteeseen ${s1vahv}, ${s2.fi.toLowerCase()} puolestaan ${s2vahv}. ${loveLine} ${workLine}`;
-}
-
-function analyzeCompat() {
-  const i1 = parseInt(document.getElementById('p1sign').value);
-  const i2 = parseInt(document.getElementById('p2sign').value);
-  const box = document.getElementById('compatResult');
-  if (isNaN(i1)||isNaN(i2)) { box.innerHTML=`<p class="error-text">Valitse tai anna molempien syntymätiedot.</p>`; return; }
-  const s1=SIGNS[i1], s2=SIGNS[i2];
-  const scores = calcScores(i1, i2);
-  const teksti = buildCompatText(i1, i2, scores);
-
-  box.innerHTML = `
-    <div class="compat-header">
-      <div class="compat-sign"><div class="glyph">${s1.glyph}</div><div class="name">${s1.fi}</div></div>
-      <div class="compat-heart">♥</div>
-      <div class="compat-sign"><div class="glyph">${s2.glyph}</div><div class="name">${s2.fi}</div></div>
-    </div>
-    ${(() => {
-      const max = Math.max(scores.rakkaus, scores.ystavyys, scores.tyo);
-      let teksti, emoji;
-      if (scores.rakkaus === max) { teksti = 'RAKASTAVAISINA VÄLINNE OVAT PARHAIMMILLAAN'; emoji = '💕'; }
-      else if (scores.ystavyys === max) { teksti = 'TULETTE PARHAITEN TOIMEEN YSTÄVINÄ'; emoji = '🤝'; }
-      else { teksti = 'TYÖKAVEREINA TULETTE PARHAITEN TOIMEEN'; emoji = '💼'; }
-      return `<div class="best-match-box">${emoji} ${teksti} ${emoji}</div>`;
-    })()}
-    <div class="score-bar"><span class="score-label"><span class="score-emoji">💏</span> Rakkaus</span><div class="bar-track"><div class="bar-fill" data-val="${scores.rakkaus}"></div></div><span class="score-num">${scores.rakkaus}%</span></div>
-    <div class="score-bar"><span class="score-label"><span class="score-emoji">👯</span> Ystävyys</span><div class="bar-track"><div class="bar-fill" data-val="${scores.ystavyys}"></div></div><span class="score-num">${scores.ystavyys}%</span></div>
-    <div class="score-bar"><span class="score-label"><span class="score-emoji">👩‍🏫</span> Työ</span><div class="bar-track"><div class="bar-fill" data-val="${scores.tyo}"></div></div><span class="score-num">${scores.tyo}%</span></div>
-    <div class="divider"></div>
-    <p class="section-label">Yhteensopivuus</p>
-    <div class="ai-text">${teksti}</div>
-    <div class="divider"></div>
-    <div class="two-col">
-      <div class="trait-box"><h4>${s1.glyph} ${s1.fi.toUpperCase()} tuo</h4><div class="keywords">${kwHtml(s1.vahvuudet,'kw-str')}</div></div>
-      <div class="trait-box"><h4>${s2.glyph} ${s2.fi.toUpperCase()} tuo</h4><div class="keywords">${kwHtml(s2.vahvuudet,'kw-str')}</div></div>
-    </div>`;
-
-  setTimeout(() => { document.querySelectorAll('.bar-fill').forEach(el => { el.style.width=el.dataset.val+'%'; }); }, 100);
-}
-
-// Stars
-const starsEl = document.getElementById('stars');
-for (let i=0; i<120; i++) {
-  const s = document.createElement('div'); s.className='star';
-  const sz = Math.random()*2+1;
-  s.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--d:${2+Math.random()*5}s;--delay:${-Math.random()*6}s;--op:${.2+Math.random()*.8}`;
-  starsEl.appendChild(s);
-}
 </script>
 </body>
 </html>
